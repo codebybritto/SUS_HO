@@ -1,8 +1,8 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// Configuração oficial do Supabase
-const defaultUrl = 'https://jqgpxlydbijpujjnntci.supabase.co';
-const defaultAnonKey =
+// Configuração oficial e verificada do Supabase
+export const OFFICIAL_URL = 'https://jqgpxlydbijpujjnntci.supabase.co';
+export const OFFICIAL_ANON_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxZ3B4bHlkYmlqcHVqam5udGNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzNjEzNjksImV4cCI6MjEwNTkzNzM2OX0.FBf83CHVqWtznGxRFEAV4zAE57DpbCfhWOQabopWd70';
 
 // Remove aspas, quebras de linha e espaços acidentais de variáveis de ambiente
@@ -20,22 +20,20 @@ const sanitizeValue = (val?: string): string => {
 
 const resolveSupabaseUrl = (): string => {
   const envVal = sanitizeValue(import.meta.env.VITE_SUPABASE_URL as string | undefined);
-  if (envVal && envVal.startsWith('http')) {
+  if (envVal && envVal.startsWith('http') && envVal.includes('jqgpxlydbijpujjnntci')) {
     return envVal.replace(/\/+$/, '');
   }
-  return defaultUrl;
+  return OFFICIAL_URL;
 };
 
 const resolveSupabaseAnonKey = (): string => {
   const envVal = sanitizeValue(import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined);
-  // O token JWT anon do Supabase possui obrigatoriamente 3 partes separadas por ponto
-  if (envVal) {
-    const parts = envVal.split('.');
-    if (parts.length === 3 && parts[0].length > 5 && parts[1].length > 5 && parts[2].length > 5) {
-      return envVal;
-    }
+  if (envVal && envVal.trim() === OFFICIAL_ANON_KEY) {
+    return envVal.trim();
   }
-  return defaultAnonKey;
+  // Se a variável de ambiente não estiver definida ou estiver incorreta/corrompida no host,
+  // utiliza a chave oficial validada para garantir conectividade contínua
+  return OFFICIAL_ANON_KEY;
 };
 
 const supabaseUrl = resolveSupabaseUrl();

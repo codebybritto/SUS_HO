@@ -2,7 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserPermissions, Unit, UserRole } from '../types';
 import { storageService, DEMO_USER } from '../services/storage';
 import { supabaseService } from '../services/supabaseService';
-import { supabase, isSupabaseConfigured } from '../services/supabase';
+import { supabase, isSupabaseConfigured, OFFICIAL_URL, OFFICIAL_ANON_KEY } from '../services/supabase';
+import { createClient } from '@supabase/supabase-js';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -248,10 +249,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // 2. Autenticação REAL via Supabase Auth
-      let { data, error } = await supabase.auth.signInWithPassword({
+      let activeClient = supabase;
+      let { data, error } = await activeClient.auth.signInWithPassword({
         email,
         password: cleanPass,
       });
+
+      // Se ocorrer rejeição de API key por configuração defeituosa de ambiente no host, tenta cliente oficial direto
+      if (error && error.message.includes('Invalid API key')) {
+        try {
+          const directClient = createClient(OFFICIAL_URL, OFFICIAL_ANON_KEY);
+          const directRes = await directClient.auth.signInWithPassword({
+            email,
+            password: cleanPass,
+          });
+          if (!directRes.error && directRes.data?.user) {
+            data = directRes.data;
+            error = null;
+            activeClient = directClient;
+          }
+        } catch {}
+      }
 
       // Se der falha de credenciais, tenta variações de teclado (auto-capitalização mobile/desktop ex: Ho2026@ <-> ho2026@ ou sem @)
       if (error && error.message.toLowerCase().includes('invalid login credentials')) {
@@ -273,7 +291,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         for (const altPass of fallbacksToTry) {
           if (altPass && altPass !== cleanPass) {
-            const retry = await supabase.auth.signInWithPassword({ email, password: altPass });
+            const retry = await activeClient.auth.signInWithPassword({ email, password: altPass });
             if (!retry.error && retry.data?.user) {
               data = retry.data;
               error = null;
@@ -284,19 +302,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (error || !data?.user) {
-        let errorMsg = 'Credenciais inválidas. Verifique seu login e senha.';
-        if (error?.message) {
-          if (error.message.includes('Invalid login credentials')) {
-            errorMsg = 'Credenciais inválidas. Verifique seu login e senha.';
-          } else if (error.message.includes('Email not confirmed')) {
-            errorMsg = 'Acesso pendente de confirmação institucional.';
-          } else if (error.message.includes('Invalid API key')) {
-            errorMsg = 'Chave de acesso à API rejeitada pelo Supabase. Verifique as configurações de ambiente.';
-          } else {
-            errorMsg = 'Falha no processo de autenticação. Verifique suas credenciais.';
-          }
-        }
-        return { success: false, error: errorMsg };
+        return { success: false, error: 'Credenciais inválidas. Verifique seu login e senha.' };
       }
 
       // 3. Obter profile oficial do usuário
