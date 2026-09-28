@@ -122,7 +122,7 @@ const MainAppContent: React.FC = () => {
                     type="text"
                     value={loginInput}
                     onChange={(e) => setLoginInput(e.target.value)}
-                    placeholder="igor.britto ou admin"
+                    placeholder="Digite seu login de operador"
                     className="w-full border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 font-mono"
                     required
                   />
@@ -229,7 +229,7 @@ const MainAppContent: React.FC = () => {
 
                 <div className="p-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-800 text-[11px]">
                   <span className="font-bold block mb-1">Acesso Administrativo Oficial:</span>
-                  O administrador principal (<code className="font-mono font-bold text-blue-700">igor.britto</code>) ou o Administrador Geral podem redefinir senhas e gerenciar novos operadores diretamente na aba Administração.
+                  O Administrador do Sistema pode redefinir senhas e gerenciar novos operadores diretamente no módulo de Administração.
                 </div>
               </div>
 

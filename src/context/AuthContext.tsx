@@ -244,14 +244,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // 1. Resolver email institucional correspondente ao login
       let email = cleanInput;
       if (!email.includes('@')) {
-        const normalized = cleanInput.toLowerCase();
-        if (normalized === 'admin') {
-          email = 'admin@gestao.saude.rj.gov.br';
-        } else if (normalized === 'igor.britto' || normalized === 'igorbritto') {
-          email = 'igor.britto@gestao.saude.rj.gov.br';
-        } else {
-          email = `${normalized}@gestao.saude.rj.gov.br`;
-        }
+        email = `${cleanInput.toLowerCase()}@gestao.saude.rj.gov.br`;
       }
 
       // 2. Autenticação REAL via Supabase Auth
@@ -259,18 +252,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email,
         password: cleanPass,
       });
-
-      // Se falhar e foi digitado 'admin', tenta também o e-mail oficial igor.britto@... com a mesma senha
-      if (error && (cleanInput.toLowerCase() === 'admin' || email === 'admin@gestao.saude.rj.gov.br')) {
-        const retryAdmin = await supabase.auth.signInWithPassword({
-          email: 'igor.britto@gestao.saude.rj.gov.br',
-          password: cleanPass,
-        });
-        if (!retryAdmin.error && retryAdmin.data?.user) {
-          data = retryAdmin.data;
-          error = null;
-        }
-      }
 
       // Se der falha de credenciais, tenta variações de teclado (auto-capitalização mobile/desktop ex: Ho2026@ <-> ho2026@ ou sem @)
       if (error && error.message.toLowerCase().includes('invalid login credentials')) {
@@ -306,11 +287,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         let errorMsg = 'Credenciais inválidas. Verifique seu login e senha.';
         if (error?.message) {
           if (error.message.includes('Invalid login credentials')) {
-            errorMsg = `Credenciais inválidas para o usuário "${cleanInput}". Utilize "igor.britto" (ou "admin") e a senha cadastrada.`;
+            errorMsg = 'Credenciais inválidas. Verifique seu login e senha.';
           } else if (error.message.includes('Email not confirmed')) {
-            errorMsg = 'E-mail institucional ainda não confirmado no Supabase.';
+            errorMsg = 'Acesso pendente de confirmação institucional.';
+          } else if (error.message.includes('Invalid API key')) {
+            errorMsg = 'Chave de acesso à API rejeitada pelo Supabase. Verifique as configurações de ambiente.';
           } else {
-            errorMsg = `Erro na autenticação: ${error.message}`;
+            errorMsg = 'Falha no processo de autenticação. Verifique suas credenciais.';
           }
         }
         return { success: false, error: errorMsg };

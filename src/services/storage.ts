@@ -214,9 +214,9 @@ export const INITIAL_DOCTORS: Doctor[] = [
 
 export const INITIAL_USERS: User[] = [
   {
-    id: 'user-igor-britto',
-    name: 'Igor Britto',
-    login: 'igor.britto',
+    id: 'user-admin',
+    name: 'Administrador do Sistema',
+    login: 'admin',
     role: 'admin',
     active: true,
     unitIds: ['unit-1', 'unit-2', 'unit-3', 'unit-4'],
@@ -240,7 +240,7 @@ export const INITIAL_USERS: User[] = [
       manage_units: true,
       manage_settings: true,
     },
-    email: 'igor.britto@gestao.saude.rj.gov.br',
+    email: 'admin@gestao.saude.rj.gov.br',
     createdAt: '2026-09-28T13:41:00.000Z',
   },
 ];
