@@ -70,7 +70,7 @@ export const buildUserFromAuthAndProfile = (authUser: any, profile?: any): User 
       : authUser.user_metadata?.permissions || getDefaultPermissions(role);
 
   const unitIds: string[] =
-    profile?.unit_ids || authUser.user_metadata?.unit_ids || ['unit-1', 'unit-2', 'unit-3', 'unit-4'];
+    profile?.unit_ids || authUser.user_metadata?.unit_ids || ['unit-lagos', 'unit-sjm', 'unit-mage'];
 
   return {
     id: authUser.id,
