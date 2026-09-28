@@ -203,6 +203,10 @@ export const ReportsView: React.FC = () => {
 
     const isLand = orientation === 'landscape';
 
+    const colWidths = isLand
+      ? { num: '3%', pac: '22%', proc: '28%', mun: '18%', med: '16%', status: '8%', cont: '5%' }
+      : { num: '3%', pac: '24%', proc: '24%', mun: '16%', med: '14%', status: '11%', cont: '8%' };
+
     const tableRows = filteredPatients
       .map((p, idx) => {
         const style = getStatusStyle(p.currentStatus);
@@ -218,27 +222,29 @@ export const ReportsView: React.FC = () => {
 
         return `
         <tr style="background-color: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'}; border-bottom: 1px solid #e2e8f0; page-break-inside: avoid;">
-          <td style="padding: 5px 4px; font-size: 8.5px; text-align: center; color: #64748b; font-weight: 700; border-right: 1px solid #e2e8f0; vertical-align: middle;">${idx + 1}</td>
-          <td style="padding: 5px 6px; font-weight: 700; color: #0f172a; font-size: 10px; border-right: 1px solid #e2e8f0; vertical-align: middle;">
-            <span>${p.name}</span>
-            <span style="font-weight: normal; color: #64748b; font-size: 8.5px; margin-left: 2px;">(${age !== null ? `${age}a` : '-'})</span>
-            ${p.isUrgent ? '<span style="background-color: #fee2e2; color: #b91c1c; font-weight: 900; font-size: 8px; padding: 1.5px 5px; border-radius: 3px; margin-left: 4px; display: inline-block; vertical-align: middle; line-height: 1.2;">URG</span>' : ''}
+          <td style="padding: 5px 3px; font-size: 8.5px; text-align: center; color: #64748b; font-weight: 700; border-right: 1px solid #e2e8f0; vertical-align: middle;">${idx + 1}</td>
+          <td style="padding: ${isLand ? '5px 6px' : '4px 5px'}; border-right: 1px solid #e2e8f0; vertical-align: middle;">
+            <div style="font-weight: 700; color: #0f172a; font-size: ${isLand ? '9.5px' : '9px'}; line-height: 1.25;">
+              ${p.name}
+              <span style="font-weight: normal; color: #64748b; font-size: ${isLand ? '8.5px' : '8px'}; margin-left: 2px;">(${age !== null ? `${age}a` : '-'})</span>
+            </div>
+            ${p.isUrgent ? `<div style="margin-top: 2px;"><span style="display: inline-block; background-color: #fee2e2; color: #b91c1c; font-size: 7.5px; font-weight: 900; padding: 1px 4px; border-radius: 2px; text-transform: uppercase; line-height: 1.1;">Urgente</span></div>` : ''}
           </td>
-          <td style="padding: 5px 6px; font-size: 8.5px; line-height: 1.25; color: #1e293b; border-right: 1px solid #e2e8f0;">
+          <td style="padding: ${isLand ? '5px 6px' : '4px 5px'}; font-size: ${isLand ? '8.5px' : '8px'}; line-height: 1.25; color: #1e293b; border-right: 1px solid #e2e8f0;">
             ${procNames}
           </td>
-          <td style="padding: 5px 6px; font-size: 8.5px; color: #334155; line-height: 1.25; border-right: 1px solid #e2e8f0;">
-            <strong>${p.city}</strong> · <span style="color:#64748b; font-size:8px;">${shortUnit}</span>
+          <td style="padding: ${isLand ? '5px 6px' : '4px 5px'}; font-size: ${isLand ? '8.5px' : '8px'}; color: #334155; line-height: 1.25; border-right: 1px solid #e2e8f0;">
+            <strong>${p.city}</strong> · <span style="color:#64748b; font-size:${isLand ? '8px' : '7.5px'};">${shortUnit}</span>
           </td>
-          <td style="padding: 5px 6px; font-size: 8.5px; color: #334155; line-height: 1.25; border-right: 1px solid #e2e8f0;">
-            ${p.requestingDoctorName || 'Não inf.'} · <span style="color:#64748b; font-size:8px;">${formatDateBR(p.requestedDate)}</span>
+          <td style="padding: ${isLand ? '5px 6px' : '4px 5px'}; font-size: ${isLand ? '8.5px' : '8px'}; color: #334155; line-height: 1.25; border-right: 1px solid #e2e8f0;">
+            ${p.requestingDoctorName || 'Não inf.'} · <span style="color:#64748b; font-size:${isLand ? '8px' : '7.5px'};">${formatDateBR(p.requestedDate)}</span>
           </td>
-          <td style="padding: 5px 4px; text-align: center; border-right: 1px solid #e2e8f0;">
-            <span style="display: inline-block; padding: 1.5px 6px; border-radius: 9999px; font-size: 8px; font-weight: 800; border: 1px solid ${style.borderColor}; background-color: #ffffff; color: ${style.dotColor}; text-transform: uppercase;">
+          <td style="padding: ${isLand ? '5px 4px' : '4px 2px'}; text-align: center; border-right: 1px solid #e2e8f0; vertical-align: middle;">
+            <span style="display: inline-block; padding: 1.5px 5px; border-radius: 9999px; font-size: ${isLand ? '8px' : '7.5px'}; font-weight: 800; border: 1px solid ${style.borderColor}; background-color: #ffffff; color: ${style.dotColor}; text-transform: uppercase; line-height: 1.1;">
               ${style.label}
             </span>
           </td>
-          <td style="padding: 5px 4px; text-align: center; font-size: 8.5px; color: #475569; white-space: nowrap;">
+          <td style="padding: ${isLand ? '5px 4px' : '4px 2px'}; text-align: center; font-size: ${isLand ? '8.5px' : '8px'}; color: #475569; white-space: nowrap; vertical-align: middle;">
             <span>${contactCount}c</span> · <span style="${absenceCount > 0 ? 'color:#b91c1c; font-weight:700;' : 'color:#64748b;'}">${absenceCount}f</span>
           </td>
         </tr>
@@ -375,13 +381,13 @@ export const ReportsView: React.FC = () => {
           <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; table-layout: fixed; margin-bottom: 6px; box-sizing: border-box;">
             <thead>
               <tr style="background: #0f1d33; color: #ffffff;">
-                <th style="width: ${isLand ? '3%' : '3.5%'}; padding: 6px 3px; font-size: 8.5px; font-weight: 800; text-align: center; border: 1px solid #0f1d33; text-transform: uppercase; white-space: nowrap;">#</th>
-                <th style="width: ${isLand ? '22%' : '23%'}; padding: 6px 5px; font-size: 8.5px; font-weight: 800; text-align: left; border: 1px solid #0f1d33; text-transform: uppercase;">Paciente (Idade)</th>
-                <th style="width: ${isLand ? '28%' : '27%'}; padding: 6px 5px; font-size: 8.5px; font-weight: 800; text-align: left; border: 1px solid #0f1d33; text-transform: uppercase;">Procedimento(s) & Olho</th>
-                <th style="width: ${isLand ? '18%' : '17%'}; padding: 6px 5px; font-size: 8.5px; font-weight: 800; text-align: left; border: 1px solid #0f1d33; text-transform: uppercase;">Município / Unidade</th>
-                <th style="width: ${isLand ? '16%' : '15%'}; padding: 6px 5px; font-size: 8.5px; font-weight: 800; text-align: left; border: 1px solid #0f1d33; text-transform: uppercase;">Médico / Solicitação</th>
-                <th style="width: ${isLand ? '8%' : '8.5%'}; padding: 6px 3px; font-size: 8.5px; font-weight: 800; text-align: center; border: 1px solid #0f1d33; text-transform: uppercase; white-space: nowrap;">Status</th>
-                <th style="width: ${isLand ? '5%' : '6%'}; padding: 6px 2px; font-size: 8px; font-weight: 800; text-align: center; border: 1px solid #0f1d33; text-transform: uppercase; white-space: nowrap;">Cont./Falt.</th>
+                <th style="width: ${colWidths.num}; padding: 6px 3px; font-size: ${isLand ? '8.5px' : '8px'}; font-weight: 800; text-align: center; border: 1px solid #0f1d33; text-transform: uppercase; white-space: nowrap;">#</th>
+                <th style="width: ${colWidths.pac}; padding: 6px 5px; font-size: ${isLand ? '8.5px' : '8px'}; font-weight: 800; text-align: left; border: 1px solid #0f1d33; text-transform: uppercase;">Paciente (Idade)</th>
+                <th style="width: ${colWidths.proc}; padding: 6px 5px; font-size: ${isLand ? '8.5px' : '8px'}; font-weight: 800; text-align: left; border: 1px solid #0f1d33; text-transform: uppercase;">Procedimento(s) & Olho</th>
+                <th style="width: ${colWidths.mun}; padding: 6px 5px; font-size: ${isLand ? '8.5px' : '8px'}; font-weight: 800; text-align: left; border: 1px solid #0f1d33; text-transform: uppercase;">Município / Unidade</th>
+                <th style="width: ${colWidths.med}; padding: 6px 5px; font-size: ${isLand ? '8.5px' : '8px'}; font-weight: 800; text-align: left; border: 1px solid #0f1d33; text-transform: uppercase;">Médico / Solicitação</th>
+                <th style="width: ${colWidths.status}; padding: 6px 2px; font-size: ${isLand ? '8.5px' : '8px'}; font-weight: 800; text-align: center; border: 1px solid #0f1d33; text-transform: uppercase; white-space: nowrap;">Status</th>
+                <th style="width: ${colWidths.cont}; padding: 6px 2px; font-size: ${isLand ? '8px' : '7.5px'}; font-weight: 800; text-align: center; border: 1px solid #0f1d33; text-transform: uppercase; white-space: nowrap;">Cont./Falt.</th>
               </tr>
             </thead>
             <tbody>
@@ -1097,15 +1103,19 @@ export const ReportsView: React.FC = () => {
                         return (
                           <tr key={p.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
                             <td className="p-2 text-center text-slate-500 font-bold text-[10px]">{idx + 1}</td>
-                            <td className="p-2 font-bold text-slate-900 whitespace-nowrap">
-                              {p.name}
-                              <span className="font-normal text-slate-500 text-[10px] ml-1">
-                                ({age !== null ? `${age}a` : '-'})
-                              </span>
-                              {p.isUrgent && (
-                                <span className="inline-flex items-center justify-center align-middle ml-1.5 px-1.5 py-0.5 bg-rose-100 text-rose-700 font-black rounded text-[8.5px] leading-none">
-                                  URG
+                            <td className="p-2 font-bold text-slate-900">
+                              <div className="leading-tight">
+                                {p.name}
+                                <span className="font-normal text-slate-500 text-[10px] ml-1">
+                                  ({age !== null ? `${age}a` : '-'})
                                 </span>
+                              </div>
+                              {p.isUrgent && (
+                                <div className="mt-1">
+                                  <span className="inline-block bg-rose-100 text-rose-700 font-black rounded px-1.5 py-0.5 text-[8.5px] uppercase leading-none">
+                                    Urgente
+                                  </span>
+                                </div>
                               )}
                             </td>
                             <td className="p-2 text-slate-700">{procNames}</td>
