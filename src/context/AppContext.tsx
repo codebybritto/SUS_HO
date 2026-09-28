@@ -61,6 +61,12 @@ interface AppContextType {
     patientId: string,
     absence: Omit<AbsenceRecord, 'id' | 'absenceNumber' | 'createdAt' | 'userId' | 'userName'>
   ) => void;
+  setPatientPriorityOverride: (
+    patientId: string,
+    isPriority: boolean,
+    reason?: string,
+    customOrder?: number
+  ) => void;
   // Administrative Actions
   addUnit: (unit: Omit<Unit, 'id'>) => void;
   updateUnit: (id: string, unit: Partial<Unit>) => void;
@@ -639,6 +645,67 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
 
         syncPatientToSupabase(updated);
+        return updated;
+      })
+    );
+  };
+
+  const setPatientPriorityOverride = (
+    patientId: string,
+    isPriority: boolean,
+    reason?: string,
+    customOrder?: number
+  ) => {
+    const now = new Date();
+    const isoString = now.toISOString();
+
+    setPatients((prev) =>
+      prev.map((pat) => {
+        if (pat.id !== patientId) return pat;
+
+        const timelineEvent: TimelineEvent = {
+          id: `time-${Date.now()}`,
+          date: isoString.split('T')[0],
+          time: now.toTimeString().slice(0, 5),
+          userId: currentUserId,
+          userName: currentUserName,
+          action: isPriority ? 'Prioridade Gerencial (Passado na Frente)' : 'Prioridade Normal Restaurada',
+          eventType: isPriority ? 'priority_override' : 'priority_reset',
+          description: isPriority
+            ? `Paciente passado na frente da fila pela gerência (${currentUserName}).${reason ? ` Motivo: ${reason}` : ''}`
+            : `Prioridade especial removida por ${currentUserName}. Paciente retornou à fila cronológica padrão.`,
+          details: { reason, priorityOrder: customOrder || 1 },
+          createdAt: isoString,
+        };
+
+        const updated: Patient = {
+          ...pat,
+          isPriorityOverride: isPriority,
+          priorityOverrideAt: isPriority ? isoString : undefined,
+          priorityOverrideBy: isPriority ? currentUserName : undefined,
+          priorityOverrideReason: isPriority ? reason : undefined,
+          priorityOrder: isPriority ? (customOrder || 1) : undefined,
+          timeline: [timelineEvent, ...pat.timeline],
+          updatedAt: isoString,
+          updatedByUserId: currentUserId,
+          updatedByUserName: currentUserName,
+        };
+
+        syncPatientToSupabase(updated);
+
+        logAudit({
+          action: 'ADMIN_CHANGE',
+          entityType: 'patient',
+          entityId: pat.id,
+          entityLabel: pat.name,
+          unitId: pat.unitId,
+          unitName: pat.unitName,
+          description: isPriority
+            ? `Paciente ${pat.name} colocado como prioridade gerencial na fila por ${currentUserName}.${reason ? ` Motivo: ${reason}` : ''}`
+            : `Prioridade gerencial do paciente ${pat.name} revogada por ${currentUserName}`,
+          newValues: { isPriorityOverride: isPriority, reason },
+        });
+
         return updated;
       })
     );
@@ -1410,6 +1477,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         recordEvolution,
         recordContactAttempt,
         recordAbsence,
+        setPatientPriorityOverride,
         addUnit,
         updateUnit,
         deleteUnit,

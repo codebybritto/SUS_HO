@@ -22,6 +22,8 @@ import {
   Filter,
   Printer,
   Download,
+  Star,
+  FastForward,
 } from 'lucide-react';
 import { exportHtmlToPdf } from '../../utils/pdfExport';
 import { Patient, TimelineEvent } from '../../types';
@@ -53,7 +55,7 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({
   onRecordAbsence,
 }) => {
   const { hasPermission, currentUser } = useAuth();
-  const { deletePatient, auditLogs, settings } = useApp();
+  const { deletePatient, auditLogs, settings, setPatientPriorityOverride } = useApp();
 
   const [activeTab, setActiveTab] = useState<DetailTab>('timeline');
   const [timelineFilter, setTimelineFilter] = useState<string>('ALL');
@@ -330,6 +332,19 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({
           <div>
             <div className="flex items-center gap-3">
               <h2 className="text-xl font-bold text-white tracking-tight">{patient.name}</h2>
+              {patient.isPriorityOverride && (
+                <span
+                  className="text-[11px] font-bold px-2 py-0.5 rounded bg-amber-400 text-amber-950 border border-amber-300 tracking-wide flex items-center gap-1 shadow-xs"
+                  title={
+                    patient.priorityOverrideReason
+                      ? `Prioridade Gerencial (${patient.priorityOverrideBy || 'Gerência'}): "${patient.priorityOverrideReason}"`
+                      : `Prioridade Gerencial definida por ${patient.priorityOverrideBy || 'Gerência'}`
+                  }
+                >
+                  <Star className="w-3 h-3 fill-amber-950 text-amber-950" />
+                  PASSADO NA FRENTE
+                </span>
+              )}
               {patient.isUrgent && (
                 <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-rose-900/80 text-rose-200 border border-rose-700 tracking-wider">
                   URGENTE
@@ -353,6 +368,36 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({
 
           {/* Action Buttons - Solid clean buttons without blue gradients */}
           <div className="flex flex-wrap items-center gap-2">
+            {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor' || hasPermission('change_patient_status')) && !patient.isDeleted && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (patient.isPriorityOverride) {
+                    if (window.confirm(`Remover prioridade especial de ${patient.name}? O paciente voltará à fila normal.`)) {
+                      setPatientPriorityOverride(patient.id, false);
+                    }
+                  } else {
+                    const reason = window.prompt(
+                      `Justificativa para passar ${patient.name} na frente da fila (opcional):`,
+                      'Determinação da Gerência'
+                    );
+                    if (reason !== null) {
+                      setPatientPriorityOverride(patient.id, true, reason.trim() || undefined);
+                    }
+                  }
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-xs transition-colors ${
+                  patient.isPriorityOverride
+                    ? 'bg-amber-400 hover:bg-amber-300 text-amber-950 border border-amber-300'
+                    : 'bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 border border-slate-700'
+                }`}
+                title={patient.isPriorityOverride ? 'Remover prioridade especial' : 'Passar este paciente na frente da fila'}
+              >
+                <FastForward className="w-3.5 h-3.5" />
+                <span>{patient.isPriorityOverride ? 'Fila Normal' : 'Passar na Frente'}</span>
+              </button>
+            )}
+
             {/* Direct Save PDF file download */}
             <button
               type="button"
@@ -478,6 +523,16 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({
               <div>
                 <span className="text-slate-500 font-medium">Médico:</span>{' '}
                 <span className="text-slate-800 font-medium">{patient.requestingDoctorName}</span>
+              </div>
+            )}
+
+            {patient.isPriorityOverride && (
+              <div>
+                <span className="text-slate-500 font-medium">Fila:</span>{' '}
+                <span className="font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded text-[11px] border border-amber-300">
+                  ★ Passado na Frente por {patient.priorityOverrideBy || 'Gerência'}
+                  {patient.priorityOverrideReason ? ` (${patient.priorityOverrideReason})` : ''}
+                </span>
               </div>
             )}
           </div>

@@ -16,11 +16,15 @@ import {
   Building2,
   Calendar,
   MoreHorizontal,
+  FastForward,
+  Star,
+  ArrowUpCircle,
+  X,
 } from 'lucide-react';
 import { Patient, PatientStatus, EyeSide } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
-import { formatDateBR, calculateAge } from '../../utils/date';
+import { formatDateBR, formatDateTimeBR, calculateAge } from '../../utils/date';
 import { getStatusStyle } from '../../utils/statusColors';
 
 interface PatientListViewProps {
@@ -42,8 +46,8 @@ export const PatientListView: React.FC<PatientListViewProps> = ({
   onEditPatient,
   initialStatusFilter = 'ALL',
 }) => {
-  const { patients, units, procedures, doctors, settings } = useApp();
-  const { allowedUnits, activeUnitId, hasPermission } = useAuth();
+  const { patients, units, procedures, doctors, settings, setPatientPriorityOverride } = useApp();
+  const { currentUser, allowedUnits, activeUnitId, hasPermission } = useAuth();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>(initialStatusFilter);
@@ -55,13 +59,23 @@ export const PatientListView: React.FC<PatientListViewProps> = ({
   const [showDeleted, setShowDeleted] = useState<boolean>(false);
   const [showFilterDrawer, setShowFilterDrawer] = useState<boolean>(false);
 
+  // Manager Priority Override Modal state
+  const [priorityModalPatient, setPriorityModalPatient] = useState<Patient | null>(null);
+  const [priorityReason, setPriorityReason] = useState<string>('');
+
+  const canManagePriority =
+    currentUser?.role === 'admin' ||
+    currentUser?.role === 'supervisor' ||
+    hasPermission('change_patient_status') ||
+    hasPermission('edit_patients');
+
   // Pagination
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(12);
 
-  // Sorting
-  const [sortBy, setSortBy] = useState<'name' | 'date' | 'status' | 'urgency' | 'absences'>('date');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  // Sorting: 'priority' (Fila de Atendimento) is the default order!
+  const [sortBy, setSortBy] = useState<'priority' | 'name' | 'date' | 'status' | 'urgency' | 'absences'>('priority');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   // Keep unitFilter in sync with activeUnitId from header
   React.useEffect(() => {
@@ -138,6 +152,28 @@ export const PatientListView: React.FC<PatientListViewProps> = ({
         return true;
       })
       .sort((a, b) => {
+        if (sortBy === 'priority') {
+          // 1. Manager priority overrides come first
+          const aOverride = a.isPriorityOverride ? 1 : 0;
+          const bOverride = b.isPriorityOverride ? 1 : 0;
+          if (aOverride !== bOverride) {
+            return sortOrder === 'asc' ? bOverride - aOverride : aOverride - bOverride;
+          }
+          if (a.isPriorityOverride && b.isPriorityOverride) {
+            const aOrd = a.priorityOrder ?? 1;
+            const bOrd = b.priorityOrder ?? 1;
+            if (aOrd !== bOrd) return sortOrder === 'asc' ? aOrd - bOrd : bOrd - aOrd;
+            const aTime = a.priorityOverrideAt || a.createdAt;
+            const bTime = b.priorityOverrideAt || b.createdAt;
+            return sortOrder === 'asc' ? aTime.localeCompare(bTime) : bTime.localeCompare(aTime);
+          }
+          // 2. Chronological registration priority (earliest registered = 1st priority in queue)
+          const aReg = a.createdAt || a.requestedDate || '';
+          const bReg = b.createdAt || b.requestedDate || '';
+          const cmp = aReg.localeCompare(bReg);
+          return sortOrder === 'asc' ? cmp : -cmp;
+        }
+
         let cmp = 0;
         if (sortBy === 'name') cmp = a.name.localeCompare(b.name);
         else if (sortBy === 'date') cmp = a.requestedDate.localeCompare(b.requestedDate);
@@ -386,8 +422,28 @@ export const PatientListView: React.FC<PatientListViewProps> = ({
               <span> · Unidade: {units.find((u) => u.id === unitFilter)?.name}</span>
             )}
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <span>Ordenar por:</span>
+          <div className="flex items-center gap-2 text-xs text-slate-500 overflow-x-auto pb-1 sm:pb-0">
+            <span className="font-semibold text-slate-600">Ordenar por:</span>
+            <button
+              type="button"
+              onClick={() => {
+                if (sortBy === 'priority') setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                else {
+                  setSortBy('priority');
+                  setSortOrder('asc');
+                }
+              }}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs ${
+                sortBy === 'priority'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300'
+              }`}
+              title="Ordem de Fila / Prioridade: Prioridades da gerência primeiro, seguidas por ordem cronológica de cadastro (mais antigo primeiro)"
+            >
+              <Star className={`w-3.5 h-3.5 ${sortBy === 'priority' ? 'fill-amber-300 text-amber-300' : 'text-amber-500'}`} />
+              <span>Prioridade da Fila</span>
+              {sortBy === 'priority' && <span>{sortOrder === 'asc' ? '↑' : '↓'}</span>}
+            </button>
             <button
               type="button"
               onClick={() => {
@@ -450,7 +506,8 @@ export const PatientListView: React.FC<PatientListViewProps> = ({
               <thead className="bg-slate-100/70 text-slate-600 uppercase text-[11px] tracking-wider border-b border-slate-200">
                 <tr>
                   <th className="py-3 px-4 font-semibold">Paciente</th>
-                  <th className="py-3 px-4 font-semibold">Procedimento(s) Solicitado(s)</th>
+                  <th className="py-3 px-4 font-semibold min-w-[220px]">Procedimento(s) Solicitado(s)</th>
+                  <th className="py-3 px-3 font-semibold text-center whitespace-nowrap min-w-[105px]">Olho</th>
                   <th className="py-3 px-4 font-semibold">Unidade Responsável</th>
                   <th className="py-3 px-4 font-semibold text-center">Faltas</th>
                   <th className="py-3 px-4 font-semibold text-center">Contatos</th>
@@ -459,9 +516,10 @@ export const PatientListView: React.FC<PatientListViewProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {paginatedPatients.map((pat) => {
+                {paginatedPatients.map((pat, idx) => {
                   const age = calculateAge(pat.birthDate);
                   const statusStyle = getStatusStyle(pat.currentStatus);
+                  const queueIndex = (currentPage - 1) * pageSize + idx;
 
                   return (
                     <tr
@@ -469,12 +527,35 @@ export const PatientListView: React.FC<PatientListViewProps> = ({
                       className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
                       onClick={() => onSelectPatient(pat)}
                     >
-                      {/* Name & Basic Info (CNS and CPF removed) */}
+                      {/* Name & Basic Info + Queue position & Priority badge */}
                       <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span
+                            className={`inline-flex items-center justify-center min-w-[28px] h-6 px-1.5 rounded-md text-[11px] font-bold font-mono ${
+                              pat.isPriorityOverride
+                                ? 'bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs'
+                                : 'bg-slate-100 text-slate-700 border border-slate-200'
+                            }`}
+                            title={`Posição na fila: ${queueIndex + 1}º lugar`}
+                          >
+                            {queueIndex + 1}º
+                          </span>
                           <span className="font-bold text-slate-900 text-sm group-hover:text-cyan-700 transition-colors">
                             {pat.name}
                           </span>
+                          {pat.isPriorityOverride && (
+                            <span
+                              className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1 shadow-2xs"
+                              title={
+                                pat.priorityOverrideReason
+                                  ? `Prioridade Gerencial (${pat.priorityOverrideBy || 'Gerência'}): "${pat.priorityOverrideReason}"`
+                                  : `Prioridade Gerencial definida por ${pat.priorityOverrideBy || 'Gerência'}`
+                              }
+                            >
+                              <Star className="w-3 h-3 text-amber-600 fill-amber-500" />
+                              Passado na Frente
+                            </span>
+                          )}
                           {pat.isUrgent && (
                             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 border border-rose-300">
                               URGENTE
@@ -490,30 +571,64 @@ export const PatientListView: React.FC<PatientListViewProps> = ({
                         </div>
                       </td>
 
-                      {/* Procedures & Lateralities (Multi-procedure support) */}
+                      {/* Procedures list */}
                       <td className="py-3 px-4">
                         {pat.procedures && pat.procedures.length > 0 ? (
-                          <div className="space-y-1">
+                          <div className="space-y-1.5">
                             {pat.procedures.map((pr) => (
-                              <div key={pr.id} className="flex items-center gap-1.5">
-                                <span className="font-medium text-slate-800">{pr.procedureName}</span>
-                                <span className="px-1.5 py-0.2 rounded font-mono text-[9px] bg-slate-100 text-slate-700 font-bold border border-slate-300">
-                                  {pr.eyeSide === 'AO' ? 'AO (Ambos)' : pr.eyeSide === 'OD' ? 'OD (Dir)' : 'OE (Esq)'}
+                              <div key={pr.id} className="min-h-[22px] flex items-center">
+                                <span className="font-medium text-slate-800 line-clamp-1" title={pr.procedureName}>
+                                  {pr.procedureName}
                                 </span>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <div className="flex items-center gap-1.5">
+                          <div className="min-h-[22px] flex items-center">
                             <span className="font-medium text-slate-800">{pat.requestedProcedureName}</span>
-                            <span className="px-1.5 py-0.2 rounded font-mono text-[9px] bg-slate-100 text-slate-700 font-bold border border-slate-300">
-                              {pat.eyeSide}
+                          </div>
+                        )}
+                        <div className="text-[10px] text-slate-400 mt-1">
+                          Solicitado em {formatDateBR(pat.requestedDate)}
+                        </div>
+                      </td>
+
+                      {/* Olho / Lateralidade (dedicated aligned column) */}
+                      <td className="py-3 px-3 text-center align-top pt-3.5">
+                        {pat.procedures && pat.procedures.length > 0 ? (
+                          <div className="space-y-1.5 flex flex-col items-center">
+                            {pat.procedures.map((pr) => {
+                              const eyeLabel =
+                                pr.eyeSide === 'AO' ? 'AO (Ambos)' : pr.eyeSide === 'OD' ? 'OD (Dir)' : 'OE (Esq)';
+                              const eyeBadgeStyle =
+                                pr.eyeSide === 'AO'
+                                  ? 'bg-blue-50 text-blue-800 border-blue-200'
+                                  : pr.eyeSide === 'OD'
+                                  ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                  : 'bg-emerald-50 text-emerald-800 border-emerald-200';
+
+                              return (
+                                <div key={pr.id} className="min-h-[22px] flex items-center justify-center">
+                                  <span className={`px-2 py-0.5 rounded font-mono text-[10px] font-bold border ${eyeBadgeStyle} whitespace-nowrap shadow-2xs`}>
+                                    {eyeLabel}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="min-h-[22px] flex items-center justify-center">
+                            <span className={`px-2 py-0.5 rounded font-mono text-[10px] font-bold border ${
+                              pat.eyeSide === 'AO'
+                                ? 'bg-blue-50 text-blue-800 border-blue-200'
+                                : pat.eyeSide === 'OD'
+                                ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                            } whitespace-nowrap shadow-2xs`}>
+                              {pat.eyeSide === 'AO' ? 'AO (Ambos)' : pat.eyeSide === 'OD' ? 'OD (Dir)' : 'OE (Esq)'}
                             </span>
                           </div>
                         )}
-                        <div className="text-[10px] text-slate-400 mt-0.5">
-                          Solicitado em {formatDateBR(pat.requestedDate)}
-                        </div>
                       </td>
 
                       {/* Unit */}
@@ -570,6 +685,27 @@ export const PatientListView: React.FC<PatientListViewProps> = ({
                       {/* Quick Actions */}
                       <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1">
+                          {canManagePriority && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPriorityModalPatient(pat);
+                                setPriorityReason(pat.priorityOverrideReason || '');
+                              }}
+                              className={`p-1.5 rounded transition-colors ${
+                                pat.isPriorityOverride
+                                  ? 'text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300'
+                                  : 'text-slate-400 hover:text-amber-600 hover:bg-amber-50'
+                              }`}
+                              title={
+                                pat.isPriorityOverride
+                                  ? `Gerenciar / Cancelar prioridade gerencial de ${pat.name}`
+                                  : `Passar ${pat.name} na frente da fila (Prioridade Gerencial)`
+                              }
+                            >
+                              <FastForward className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => onRecordEvolution(pat)}
@@ -683,6 +819,141 @@ export const PatientListView: React.FC<PatientListViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* MODAL: PASSAR PACIENTE NA FRENTE DA FILA */}
+      {priorityModalPatient && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+            <div className="bg-slate-900 text-white px-5 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FastForward className="w-5 h-5 text-amber-400" />
+                <h3 className="font-bold text-sm">
+                  {priorityModalPatient.isPriorityOverride ? 'Gerenciar Prioridade na Fila' : 'Passar Paciente na Frente'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPriorityModalPatient(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5">
+                <div className="text-xs text-slate-500 font-medium">Paciente Selecionado:</div>
+                <div className="font-bold text-slate-900 text-base mt-0.5">{priorityModalPatient.name}</div>
+                <div className="text-xs text-slate-600 mt-1 flex flex-wrap items-center gap-2">
+                  <span>{priorityModalPatient.city}</span>
+                  <span>·</span>
+                  <span>{priorityModalPatient.unitName}</span>
+                  <span>·</span>
+                  <span>Cadastrado em {formatDateTimeBR(priorityModalPatient.createdAt)}</span>
+                </div>
+              </div>
+
+              {priorityModalPatient.isPriorityOverride ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 text-xs text-amber-900 space-y-1.5">
+                  <div className="flex items-center gap-1.5 font-bold">
+                    <Star className="w-4 h-4 text-amber-600 fill-amber-500" />
+                    <span>Paciente atualmente prioritário na fila</span>
+                  </div>
+                  <div>Priorizado por: <strong>{priorityModalPatient.priorityOverrideBy || 'Gerência'}</strong></div>
+                  {priorityModalPatient.priorityOverrideAt && (
+                    <div>Em: {formatDateTimeBR(priorityModalPatient.priorityOverrideAt)}</div>
+                  )}
+                  {priorityModalPatient.priorityOverrideReason && (
+                    <div>Motivo informado: <em>"{priorityModalPatient.priorityOverrideReason}"</em></div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-xs text-slate-700 leading-relaxed bg-blue-50/80 border border-blue-200 rounded-xl p-3 text-blue-900">
+                  <p>
+                    <strong>Ação de Gerência:</strong> Ao confirmar, este paciente receberá prioridade especial e será posicionado no início da fila de regulação, à frente dos demais pacientes da unidade.
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Justificativa / Motivo da Priorização:
+                </label>
+                <textarea
+                  rows={2}
+                  value={priorityReason}
+                  onChange={(e) => setPriorityReason(e.target.value)}
+                  placeholder="Ex: Determinação médica para cirurgia imediata, ordem judicial, gravidade..."
+                  className="w-full p-2.5 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 resize-none text-slate-800"
+                />
+
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {[
+                    'Determinação Médica',
+                    'Urgência Clínica',
+                    'Decisão Judicial',
+                    'Idoso / Prioridade Legal',
+                    'Reavaliação Pós-Procedimento',
+                  ].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setPriorityReason(preset)}
+                      className="text-[11px] px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md border border-slate-200 transition-colors"
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                {priorityModalPatient.isPriorityOverride ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm(`Remover a prioridade especial de ${priorityModalPatient.name}? O paciente voltará à posição cronológica normal na fila.`)) {
+                        setPatientPriorityOverride(priorityModalPatient.id, false);
+                        setPriorityModalPatient(null);
+                      }
+                    }}
+                    className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-lg text-xs font-bold transition-colors"
+                  >
+                    Remover Prioridade (Voltar à Fila)
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setPriorityModalPatient(null)}
+                    className="px-3.5 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-xs font-semibold transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPatientPriorityOverride(
+                      priorityModalPatient.id,
+                      true,
+                      priorityReason.trim() || undefined
+                    );
+                    setPriorityModalPatient(null);
+                    setPriorityReason('');
+                  }}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-xs transition-colors flex items-center gap-1.5 ml-auto"
+                >
+                  <Star className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
+                  <span>
+                    {priorityModalPatient.isPriorityOverride ? 'Atualizar Justificativa' : 'Confirmar e Passar na Frente'}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

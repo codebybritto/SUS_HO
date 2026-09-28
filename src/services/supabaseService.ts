@@ -11,43 +11,56 @@ import {
 } from '../types';
 
 // ==================== PATIENT MAPPERS ====================
-export const mapPatientFromDb = (row: any): Patient => ({
-  id: row.id,
-  name: row.name || '',
-  birthDate: row.birth_date || '',
-  procedures: row.procedures || [],
-  requestedProcedureId: row.requested_procedure_id || '',
-  requestedProcedureName: row.requested_procedure_name || '',
-  eyeSide: row.eye_side || 'AO',
-  requestedDate: row.requested_date || '',
-  requestingDoctorId: row.requesting_doctor_id || '',
-  requestingDoctorName: row.requesting_doctor_name || '',
-  isUrgent: Boolean(row.is_urgent),
-  isSimulation: Boolean(row.is_simulation),
-  city: row.city || '',
-  hasFollowup: Boolean(row.has_followup),
-  followupDate: row.followup_date || undefined,
-  notes: row.notes || '',
-  unitId: row.unit_id || '',
-  unitName: row.unit_name || '',
-  currentStatus: row.current_status || 'Aguardando Contato',
-  previousStatus: row.previous_status || undefined,
-  totalAbsences: Number(row.total_absences || 0),
-  absences: row.absences || [],
-  contactAttempts: row.contact_attempts || [],
-  evolutions: row.evolutions || [],
-  timeline: row.timeline || [],
-  isDeleted: Boolean(row.is_deleted),
-  deletedAt: row.deleted_at || undefined,
-  deletedBy: row.deleted_by || undefined,
-  deletionReason: row.deletion_reason || undefined,
-  createdAt: row.created_at || new Date().toISOString(),
-  createdByUserId: row.created_by_user_id || 'system',
-  createdByUserName: row.created_by_user_name || 'Sistema',
-  updatedAt: row.updated_at || new Date().toISOString(),
-  updatedByUserId: row.updated_by_user_id || undefined,
-  updatedByUserName: row.updated_by_user_name || undefined,
-});
+export const mapPatientFromDb = (row: any): Patient => {
+  const timeline = row.timeline || [];
+  const priorityEvent = timeline.find(
+    (e: any) => e.eventType === 'priority_override' || e.eventType === 'priority_reset'
+  );
+  const isPriorityOverride = priorityEvent?.eventType === 'priority_override';
+
+  return {
+    id: row.id,
+    name: row.name || '',
+    birthDate: row.birth_date || '',
+    procedures: row.procedures || [],
+    requestedProcedureId: row.requested_procedure_id || '',
+    requestedProcedureName: row.requested_procedure_name || '',
+    eyeSide: row.eye_side || 'AO',
+    requestedDate: row.requested_date || '',
+    requestingDoctorId: row.requesting_doctor_id || '',
+    requestingDoctorName: row.requesting_doctor_name || '',
+    isUrgent: Boolean(row.is_urgent),
+    isSimulation: Boolean(row.is_simulation),
+    isPriorityOverride,
+    priorityOverrideAt: isPriorityOverride ? priorityEvent?.createdAt : undefined,
+    priorityOverrideBy: isPriorityOverride ? priorityEvent?.userName : undefined,
+    priorityOverrideReason: isPriorityOverride ? priorityEvent?.details?.reason : undefined,
+    priorityOrder: isPriorityOverride ? priorityEvent?.details?.priorityOrder : undefined,
+    city: row.city || '',
+    hasFollowup: Boolean(row.has_followup),
+    followupDate: row.followup_date || undefined,
+    notes: row.notes || '',
+    unitId: row.unit_id || '',
+    unitName: row.unit_name || '',
+    currentStatus: row.current_status || 'Aguardando Contato',
+    previousStatus: row.previous_status || undefined,
+    totalAbsences: Number(row.total_absences || 0),
+    absences: row.absences || [],
+    contactAttempts: row.contact_attempts || [],
+    evolutions: row.evolutions || [],
+    timeline,
+    isDeleted: Boolean(row.is_deleted),
+    deletedAt: row.deleted_at || undefined,
+    deletedBy: row.deleted_by || undefined,
+    deletionReason: row.deletion_reason || undefined,
+    createdAt: row.created_at || new Date().toISOString(),
+    createdByUserId: row.created_by_user_id || 'system',
+    createdByUserName: row.created_by_user_name || 'Sistema',
+    updatedAt: row.updated_at || new Date().toISOString(),
+    updatedByUserId: row.updated_by_user_id || undefined,
+    updatedByUserName: row.updated_by_user_name || undefined,
+  };
+};
 
 export const mapPatientToDb = (p: Patient): any => ({
   id: p.id,

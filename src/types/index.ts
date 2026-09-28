@@ -153,7 +153,9 @@ export type TimelineEventType =
   | 'evolution'
   | 'automatic_rule'
   | 'deletion'
-  | 'unit_change';
+  | 'unit_change'
+  | 'priority_override'
+  | 'priority_reset';
 
 export interface TimelineEvent {
   id: string;
@@ -195,6 +197,12 @@ export interface Patient {
   requestingDoctorName: string;
   isUrgent: boolean;
   isSimulation?: boolean;
+  // Priority queue management (Manager priority override)
+  isPriorityOverride?: boolean;
+  priorityOverrideAt?: string;
+  priorityOverrideBy?: string;
+  priorityOverrideReason?: string;
+  priorityOrder?: number;
   city: string;
   hasFollowup: boolean;
   followupDate?: string;

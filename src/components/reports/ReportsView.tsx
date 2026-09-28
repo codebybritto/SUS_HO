@@ -828,6 +828,7 @@ export const ReportsView: React.FC = () => {
                 <th className="py-3 px-4">Nome do Paciente</th>
                 <th className="py-3 px-3">Nascimento (Idade)</th>
                 <th className="py-3 px-3">Procedimento(s) Solicitado(s)</th>
+                <th className="py-3 px-3 text-center whitespace-nowrap">Olho</th>
                 <th className="py-3 px-3">Município</th>
                 <th className="py-3 px-3">Médico</th>
                 <th className="py-3 px-3">Data Solicitada</th>
@@ -838,7 +839,7 @@ export const ReportsView: React.FC = () => {
             <tbody className="divide-y divide-slate-200">
               {filteredPatients.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-400">
+                  <td colSpan={9} className="py-8 text-center text-slate-400">
                     Nenhum paciente localizado com a combinação de filtros selecionada.
                   </td>
                 </tr>
@@ -864,19 +865,32 @@ export const ReportsView: React.FC = () => {
                         {p.procedures && p.procedures.length > 0 ? (
                           <div className="space-y-1">
                             {p.procedures.map((pr) => (
-                              <div key={pr.id} className="flex items-center gap-1.5">
-                                <span className="font-medium text-slate-800">{pr.procedureName}</span>
+                              <div key={pr.id} className="min-h-[20px] flex items-center">
+                                <span className="font-medium text-slate-800 line-clamp-1">{pr.procedureName}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="min-h-[20px] flex items-center">
+                            <span className="font-medium text-slate-800">{p.requestedProcedureName}</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-center align-top pt-3.5">
+                        {p.procedures && p.procedures.length > 0 ? (
+                          <div className="space-y-1 flex flex-col items-center">
+                            {p.procedures.map((pr) => (
+                              <div key={pr.id} className="min-h-[20px] flex items-center justify-center">
                                 <span className="px-1.5 py-0.2 rounded font-mono text-[9px] bg-slate-100 text-slate-700 font-bold border border-slate-300">
-                                  {pr.eyeSide}
+                                  {pr.eyeSide === 'AO' ? 'AO (Ambos)' : pr.eyeSide === 'OD' ? 'OD (Dir)' : 'OE (Esq)'}
                                 </span>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-medium text-slate-800">{p.requestedProcedureName}</span>
+                          <div className="min-h-[20px] flex items-center justify-center">
                             <span className="px-1.5 py-0.2 rounded font-mono text-[9px] bg-slate-100 text-slate-700 font-bold border border-slate-300">
-                              {p.eyeSide}
+                              {p.eyeSide === 'AO' ? 'AO (Ambos)' : p.eyeSide === 'OD' ? 'OD (Dir)' : 'OE (Esq)'}
                             </span>
                           </div>
                         )}
