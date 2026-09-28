@@ -11,7 +11,7 @@ import {
 } from '../types';
 
 const STORAGE_KEYS = {
-  USERS: 'micrologos_users_rj_v6',
+  USERS: 'micrologos_users_rj_v7',
   UNITS: 'micrologos_units_rj_v6',
   MUNICIPALITIES: 'micrologos_municipalities_rj_v6',
   PROCEDURES: 'micrologos_procedures_rj_v6',
@@ -251,7 +251,7 @@ export const DEMO_USER: User = {
   name: 'Operador de Demonstração (Simulado)',
   login: 'demo',
   password: '',
-  role: 'admin',
+  role: 'supervisor',
   active: true,
   unitIds: ['unit-1', 'unit-2', 'unit-3', 'unit-4'],
   permissions: {
@@ -263,9 +263,9 @@ export const DEMO_USER: User = {
     record_evolution: true,
     record_contact_attempt: true,
     change_patient_status: true,
-    manage_procedures: true,
-    manage_doctors: true,
-    manage_municipalities: true,
+    manage_procedures: false,
+    manage_doctors: false,
+    manage_municipalities: false,
     view_timeline: true,
     view_logs: true,
     view_reports: true,

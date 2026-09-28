@@ -303,8 +303,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [doctors]);
 
   useEffect(() => {
-    storageService.saveUsers(users);
-  }, [users]);
+    if (!isDemoMode) {
+      storageService.saveUsers(users);
+    }
+  }, [users, isDemoMode]);
 
   useEffect(() => {
     if (isDemoMode) {
@@ -1063,7 +1065,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       municipalities: unitData.municipalities || [],
     };
     setUnits((prev) => [...prev, newUnit]);
-    if (isSupabaseConfigured()) {
+    if (!isDemoMode && isSupabaseConfigured()) {
       supabaseService.upsertUnit(newUnit).catch(console.warn);
     }
     logAudit({
@@ -1080,7 +1082,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((u) => {
         if (u.id !== id) return u;
         const updated = { ...u, ...unitData };
-        if (isSupabaseConfigured()) {
+        if (!isDemoMode && isSupabaseConfigured()) {
           supabaseService.upsertUnit(updated).catch(console.warn);
         }
         logAudit({
@@ -1098,7 +1100,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteUnit = (id: string) => {
     const unit = units.find((u) => u.id === id);
     setUnits((prev) => prev.filter((u) => u.id !== id));
-    if (isSupabaseConfigured()) {
+    if (!isDemoMode && isSupabaseConfigured()) {
       supabaseService.deleteUnit(id).catch(console.warn);
     }
     if (unit) {
@@ -1119,7 +1121,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `mun-${Date.now()}`,
     };
     setMunicipalities((prev) => [...prev, newMun]);
-    if (isSupabaseConfigured()) {
+    if (!isDemoMode && isSupabaseConfigured()) {
       supabaseService.upsertMunicipality(newMun).catch(console.warn);
     }
     logAudit({
@@ -1136,7 +1138,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((m) => {
         if (m.id !== id) return m;
         const updated = { ...m, ...munData };
-        if (isSupabaseConfigured()) {
+        if (!isDemoMode && isSupabaseConfigured()) {
           supabaseService.upsertMunicipality(updated).catch(console.warn);
         }
         logAudit({
@@ -1154,7 +1156,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteMunicipality = (id: string) => {
     const m = municipalities.find((mun) => mun.id === id);
     setMunicipalities((prev) => prev.filter((mun) => mun.id !== id));
-    if (isSupabaseConfigured()) {
+    if (!isDemoMode && isSupabaseConfigured()) {
       supabaseService.deleteMunicipality(id).catch(console.warn);
     }
     if (m) {
@@ -1175,7 +1177,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `proc-${Date.now()}`,
     };
     setProcedures((prev) => [...prev, newProc]);
-    if (isSupabaseConfigured()) {
+    if (!isDemoMode && isSupabaseConfigured()) {
       supabaseService.upsertProcedure(newProc).catch(console.warn);
     }
     logAudit({
@@ -1192,7 +1194,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((p) => {
         if (p.id !== id) return p;
         const updated = { ...p, ...procData };
-        if (isSupabaseConfigured()) {
+        if (!isDemoMode && isSupabaseConfigured()) {
           supabaseService.upsertProcedure(updated).catch(console.warn);
         }
         logAudit({
@@ -1210,7 +1212,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteProcedure = (id: string) => {
     const proc = procedures.find((p) => p.id === id);
     setProcedures((prev) => prev.filter((p) => p.id !== id));
-    if (isSupabaseConfigured()) {
+    if (!isDemoMode && isSupabaseConfigured()) {
       supabaseService.deleteProcedure(id).catch(console.warn);
     }
     if (proc) {
@@ -1231,7 +1233,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `doc-${Date.now()}`,
     };
     setDoctors((prev) => [...prev, newDoc]);
-    if (isSupabaseConfigured()) {
+    if (!isDemoMode && isSupabaseConfigured()) {
       supabaseService.upsertDoctor(newDoc).catch(console.warn);
     }
     logAudit({
@@ -1248,7 +1250,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((d) => {
         if (d.id !== id) return d;
         const updated = { ...d, ...docData };
-        if (isSupabaseConfigured()) {
+        if (!isDemoMode && isSupabaseConfigured()) {
           supabaseService.upsertDoctor(updated).catch(console.warn);
         }
         logAudit({
@@ -1266,7 +1268,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteDoctor = (id: string) => {
     const doc = doctors.find((d) => d.id === id);
     setDoctors((prev) => prev.filter((d) => d.id !== id));
-    if (isSupabaseConfigured()) {
+    if (!isDemoMode && isSupabaseConfigured()) {
       supabaseService.deleteDoctor(id).catch(console.warn);
     }
     if (doc) {
@@ -1282,6 +1284,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Users
   const addUser = (userData: Omit<User, 'id' | 'createdAt'>) => {
+    if (isDemoMode) {
+      console.warn('Criação de usuários bloqueada no modo demonstração');
+      return;
+    }
     const newUser: User = {
       ...userData,
       id: `user-${Date.now()}`,
@@ -1301,6 +1307,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateUser = (id: string, userData: Partial<User>) => {
+    if (isDemoMode) {
+      console.warn('Edição de usuários bloqueada no modo demonstração');
+      return;
+    }
     setUsers((prev) =>
       prev.map((u) => {
         if (u.id !== id) return u;
@@ -1321,6 +1331,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteUser = (id: string) => {
+    if (isDemoMode) {
+      console.warn('Exclusão de usuários bloqueada no modo demonstração');
+      return;
+    }
     const user = users.find((u) => u.id === id);
     setUsers((prev) => prev.filter((u) => u.id !== id));
     if (isSupabaseConfigured()) {
@@ -1341,7 +1355,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateSettings = (newSettings: Partial<SystemSettings>) => {
     setSettings((prev) => {
       const updated = { ...prev, ...newSettings };
-      if (isSupabaseConfigured()) {
+      if (!isDemoMode && isSupabaseConfigured()) {
         supabaseService.saveSettings(updated).catch(console.warn);
       }
       logAudit({

@@ -130,33 +130,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const cleanLogin = (loginInput || '').trim().toLowerCase();
     const cleanPass = (pass || '').trim();
 
-    let users = storageService.getUsers();
-    let user = users.find(
-      (u) => u.login.trim().toLowerCase() === cleanLogin && u.active
-    );
-
-    // If user not found in local cache or credentials mismatch, fetch fresh users from Supabase!
-    if ((!user || (cleanPass && user.password && user.password !== cleanPass)) && isSupabaseConfigured()) {
+    let users: User[] = [];
+    if (isSupabaseConfigured()) {
       try {
         const supaUsers = await supabaseService.fetchUsers();
         if (supaUsers && supaUsers.length > 0) {
           storageService.saveUsers(supaUsers);
           users = supaUsers;
-          user = users.find(
-            (u) => u.login.trim().toLowerCase() === cleanLogin && u.active
-          );
         }
       } catch (err) {
-        console.warn('Erro ao consultar usuário no Supabase:', err);
+        console.warn('Erro ao consultar usuários no Supabase:', err);
       }
     }
+
+    if (users.length === 0) {
+      users = storageService.getUsers().filter((u) => u.login !== 'demo' && !u.id.startsWith('demo'));
+    }
+
+    const user = users.find(
+      (u) => u.login.trim().toLowerCase() === cleanLogin && u.active
+    );
 
     if (user) {
       if (cleanPass) {
         const isPassMatch =
           user.password === cleanPass ||
           user.password?.toLowerCase() === cleanPass.toLowerCase() ||
-          (user.role === 'admin' && ['ho2026@', 'grupoh02026@', '123', 'admin'].includes(cleanPass.toLowerCase()));
+          (user.role === 'admin' && ['ho2026@', 'grupoh02026@'].includes(cleanPass.toLowerCase()));
 
         if (!isPassMatch) {
           return false;
@@ -212,6 +212,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const hasPermission = (permission: keyof UserPermissions): boolean => {
     if (!currentUser) return false;
+    if (isDemoMode && (permission === 'manage_users' || permission === 'manage_settings')) {
+      return false;
+    }
     if (currentUser.role === 'admin') return true;
     return !!currentUser.permissions[permission];
   };
@@ -223,7 +226,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const changeOwnPassword = async (newPassword: string): Promise<boolean> => {
-    if (!currentUser) return false;
+    if (!currentUser || isDemoMode) return false;
     const users = storageService.getUsers();
     const updatedUsers = users.map((u) => {
       if (u.id === currentUser.id) {
@@ -249,6 +252,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     newPassword: string,
     forceChangeOnNextLogin: boolean
   ): Promise<boolean> => {
+    if (isDemoMode) return false;
     const users = storageService.getUsers();
     let targetUser: User | null = null;
 
