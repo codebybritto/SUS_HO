@@ -22,8 +22,19 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 2. REMOVER SENHA DE SYSTEM_USERS
-ALTER TABLE public.system_users DROP COLUMN IF EXISTS password;
+-- 2. REMOVER DEPENDÊNCIAS DE SENHA EM VIEWS E NA TABELA SYSTEM_USERS
+DROP VIEW IF EXISTS public.usuarios CASCADE;
+DROP VIEW IF EXISTS public.users CASCADE;
+ALTER TABLE public.system_users DROP COLUMN IF EXISTS password CASCADE;
+
+-- Recriar as views de compatibilidade sem o campo de senha
+CREATE OR REPLACE VIEW public.usuarios AS
+SELECT id, name, login, role, active, unit_ids, permissions, email, created_at, last_login_at, must_change_password
+FROM public.system_users;
+
+CREATE OR REPLACE VIEW public.users AS
+SELECT id, name, login, role, active, unit_ids, permissions, email, created_at, last_login_at, must_change_password
+FROM public.system_users;
 
 -- 3. ÍNDICES DE PERFORMANCE E SEGURANÇA
 CREATE INDEX IF NOT EXISTS idx_profiles_login ON public.profiles(login);

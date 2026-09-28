@@ -78,8 +78,19 @@ CREATE TABLE IF NOT EXISTS public.system_users (
     last_login_at TEXT,
     must_change_password BOOLEAN NOT NULL DEFAULT false
 );
--- Remove password column se ainda existir
-ALTER TABLE public.system_users DROP COLUMN IF EXISTS password;
+-- Remove password column se ainda existir e dependências em views
+DROP VIEW IF EXISTS public.usuarios CASCADE;
+DROP VIEW IF EXISTS public.users CASCADE;
+ALTER TABLE public.system_users DROP COLUMN IF EXISTS password CASCADE;
+
+-- Recria views de compatibilidade sem o campo de senha
+CREATE OR REPLACE VIEW public.usuarios AS
+SELECT id, name, login, role, active, unit_ids, permissions, email, created_at, last_login_at, must_change_password
+FROM public.system_users;
+
+CREATE OR REPLACE VIEW public.users AS
+SELECT id, name, login, role, active, unit_ids, permissions, email, created_at, last_login_at, must_change_password
+FROM public.system_users;
 
 -- 6. TABELA DE PACIENTES
 CREATE TABLE IF NOT EXISTS public.patients (
