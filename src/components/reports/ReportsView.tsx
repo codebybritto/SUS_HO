@@ -218,11 +218,11 @@ export const ReportsView: React.FC = () => {
 
         return `
         <tr style="background-color: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'}; border-bottom: 1px solid #e2e8f0; page-break-inside: avoid;">
-          <td style="padding: 5px 4px; font-size: 8.5px; text-align: center; color: #64748b; font-weight: 700; border-right: 1px solid #e2e8f0;">${idx + 1}</td>
-          <td style="padding: 5px 6px; font-weight: 700; color: #0f172a; font-size: 10px; border-right: 1px solid #e2e8f0;">
-            ${p.name}
-            <span style="font-weight: normal; color: #64748b; font-size: 8.5px;">(${age !== null ? `${age}a` : '-'})</span>
-            ${p.isUrgent ? '<span style="display:inline-block; margin-left:3px; font-size:7.5px; background-color:#fee2e2; color:#b91c1c; border:1px solid #f87171; border-radius:2px; padding:0 2px; font-weight:800;">URG</span>' : ''}
+          <td style="padding: 5px 4px; font-size: 8.5px; text-align: center; color: #64748b; font-weight: 700; border-right: 1px solid #e2e8f0; vertical-align: middle;">${idx + 1}</td>
+          <td style="padding: 5px 6px; font-weight: 700; color: #0f172a; font-size: 10px; border-right: 1px solid #e2e8f0; vertical-align: middle;">
+            <span>${p.name}</span>
+            <span style="font-weight: normal; color: #64748b; font-size: 8.5px; margin-left: 2px;">(${age !== null ? `${age}a` : '-'})</span>
+            ${p.isUrgent ? '<span style="display:inline-block; vertical-align:middle; line-height:1; font-size:7.5px; font-weight:900; background-color:#fee2e2; color:#b91c1c; border:1px solid #ef4444; border-radius:3px; padding:2px 4px 1.5px 4px; margin-left:5px; letter-spacing:0.3px;">URG</span>' : ''}
           </td>
           <td style="padding: 5px 6px; font-size: 8.5px; line-height: 1.25; color: #1e293b; border-right: 1px solid #e2e8f0;">
             ${procNames}
@@ -296,7 +296,7 @@ export const ReportsView: React.FC = () => {
           <!-- Header -->
           <table style="width: 100%; border-bottom: 2px solid #0f1d33; padding-bottom: 6px; margin-bottom: 6px; border-collapse: collapse; table-layout: fixed; box-sizing: border-box;">
             <tr>
-              <td style="vertical-align: middle; text-align: left; width: 62%;">
+              <td style="vertical-align: middle; text-align: left; width: 56%;">
                 <table style="border-collapse: collapse;">
                   <tr>
                     <td style="vertical-align: middle; padding-right: 10px; width: 48px;">
@@ -309,11 +309,24 @@ export const ReportsView: React.FC = () => {
                   </tr>
                 </table>
               </td>
-              <td style="vertical-align: middle; text-align: right; width: 38%;">
-                <div style="font-size: 8.5px; color: #334155; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 8px; line-height: 1.35; display: inline-block; text-align: right;">
-                  <div><strong>Protocolo:</strong> <code style="font-family: monospace; font-weight: bold; color: #0f172a;">${reportCode}</code></div>
-                  <div><strong>Emissão:</strong> ${dateFormatted} às ${timeFormatted} · <strong>Operador:</strong> ${currentUser?.name || 'Administrador'}</div>
-                </div>
+              <td style="vertical-align: middle; text-align: right; width: 44%;">
+                <table style="display: inline-table; border-collapse: separate; border-spacing: 0; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; text-align: right; box-sizing: border-box;">
+                  <tr>
+                    <td style="padding: 5px 10px 3px 10px; font-size: 8.5px; line-height: 1.3; border-bottom: 1px solid #e2e8f0; white-space: nowrap;">
+                      <span style="font-weight: 800; color: #475569; text-transform: uppercase;">Protocolo:</span>
+                      <span style="font-family: monospace; font-weight: 700; color: #0f172a; margin-left: 4px;">${reportCode}</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 3px 10px 5px 10px; font-size: 8.5px; line-height: 1.3; white-space: nowrap;">
+                      <span style="font-weight: 800; color: #475569; text-transform: uppercase;">Emissão:</span>
+                      <span style="font-weight: 600; color: #0f172a; margin-left: 3px;">${dateFormatted} às ${timeFormatted}</span>
+                      <span style="color: #94a3b8; margin: 0 4px; font-weight: 400;">·</span>
+                      <span style="font-weight: 800; color: #475569; text-transform: uppercase;">Operador:</span>
+                      <span style="font-weight: 600; color: #0f172a; margin-left: 3px;">${currentUser?.name || 'Administrador'}</span>
+                    </td>
+                  </tr>
+                </table>
               </td>
             </tr>
           </table>
@@ -321,37 +334,42 @@ export const ReportsView: React.FC = () => {
           <!-- Structured KPI Strip (Collapsed table, zero phantom lines, flush borders) -->
           <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; table-layout: fixed; margin-bottom: 6px; box-sizing: border-box;">
             <tr>
-              <td style="width: 16.66%; background: #f8fafc; border: 1px solid #cbd5e1; padding: 5px 2px; text-align: center;">
-                <div style="font-size: 7.5px; font-weight: 700; color: #64748b; text-transform: uppercase;">Total</div>
-                <div style="font-size: 11.5px; font-weight: 900; color: #0f1d33;">${summary.total}</div>
+              <td style="width: 16.66%; background: #f8fafc; border: 1px solid #cbd5e1; padding: 5px 2px 6px 2px; text-align: center; vertical-align: middle;">
+                <div style="font-size: 7.5px; font-weight: 800; color: #64748b; text-transform: uppercase; line-height: 1.2;">Total</div>
+                <div style="font-size: 12px; font-weight: 900; color: #0f1d33; line-height: 1.2; margin-top: 1px;">${summary.total}</div>
               </td>
-              <td style="width: 16.66%; background: #f0f9ff; border: 1px solid #cbd5e1; padding: 5px 2px; text-align: center;">
-                <div style="font-size: 7.5px; font-weight: 700; color: #0369a1; text-transform: uppercase;">Agendados</div>
-                <div style="font-size: 11.5px; font-weight: 900; color: #0284c7;">${summary.agendados}</div>
+              <td style="width: 16.66%; background: #f0f9ff; border: 1px solid #cbd5e1; padding: 5px 2px 6px 2px; text-align: center; vertical-align: middle;">
+                <div style="font-size: 7.5px; font-weight: 800; color: #0369a1; text-transform: uppercase; line-height: 1.2;">Agendados</div>
+                <div style="font-size: 12px; font-weight: 900; color: #0284c7; line-height: 1.2; margin-top: 1px;">${summary.agendados}</div>
               </td>
-              <td style="width: 16.66%; background: #f0fdf4; border: 1px solid #cbd5e1; padding: 5px 2px; text-align: center;">
-                <div style="font-size: 7.5px; font-weight: 700; color: #15803d; text-transform: uppercase;">Regulados</div>
-                <div style="font-size: 11.5px; font-weight: 900; color: #16a34a;">${summary.regulados}</div>
+              <td style="width: 16.66%; background: #f0fdf4; border: 1px solid #cbd5e1; padding: 5px 2px 6px 2px; text-align: center; vertical-align: middle;">
+                <div style="font-size: 7.5px; font-weight: 800; color: #15803d; text-transform: uppercase; line-height: 1.2;">Regulados</div>
+                <div style="font-size: 12px; font-weight: 900; color: #16a34a; line-height: 1.2; margin-top: 1px;">${summary.regulados}</div>
               </td>
-              <td style="width: 16.66%; background: #fffbeb; border: 1px solid #cbd5e1; padding: 5px 2px; text-align: center;">
-                <div style="font-size: 7.5px; font-weight: 700; color: #b45309; text-transform: uppercase;">Micrologos</div>
-                <div style="font-size: 11.5px; font-weight: 900; color: #d97706;">${summary.micrologos}</div>
+              <td style="width: 16.66%; background: #fffbeb; border: 1px solid #cbd5e1; padding: 5px 2px 6px 2px; text-align: center; vertical-align: middle;">
+                <div style="font-size: 7.5px; font-weight: 800; color: #b45309; text-transform: uppercase; line-height: 1.2;">Micrologos</div>
+                <div style="font-size: 12px; font-weight: 900; color: #d97706; line-height: 1.2; margin-top: 1px;">${summary.micrologos}</div>
               </td>
-              <td style="width: 16.66%; background: #fff1f2; border: 1px solid #cbd5e1; padding: 5px 2px; text-align: center;">
-                <div style="font-size: 7.5px; font-weight: 700; color: #be123c; text-transform: uppercase;">Sem Contato</div>
-                <div style="font-size: 11.5px; font-weight: 900; color: #e11d48;">${summary.semInteracao}</div>
+              <td style="width: 16.66%; background: #fff1f2; border: 1px solid #cbd5e1; padding: 5px 2px 6px 2px; text-align: center; vertical-align: middle;">
+                <div style="font-size: 7.5px; font-weight: 800; color: #be123c; text-transform: uppercase; line-height: 1.2;">Sem Contato</div>
+                <div style="font-size: 12px; font-weight: 900; color: #e11d48; line-height: 1.2; margin-top: 1px;">${summary.semInteracao}</div>
               </td>
-              <td style="width: 16.66%; background: #fef2f2; border: 1px solid #cbd5e1; padding: 5px 2px; text-align: center;">
-                <div style="font-size: 7.5px; font-weight: 700; color: #b91c1c; text-transform: uppercase;">Urgentes</div>
-                <div style="font-size: 11.5px; font-weight: 900; color: #dc2626;">${summary.urgentes}</div>
+              <td style="width: 16.66%; background: #fef2f2; border: 1px solid #cbd5e1; padding: 5px 2px 6px 2px; text-align: center; vertical-align: middle;">
+                <div style="font-size: 7.5px; font-weight: 800; color: #b91c1c; text-transform: uppercase; line-height: 1.2;">Urgentes</div>
+                <div style="font-size: 12px; font-weight: 900; color: #dc2626; line-height: 1.2; margin-top: 1px;">${summary.urgentes}</div>
               </td>
             </tr>
           </table>
 
-          <!-- Filter Description (Flush width, no overflow clipping) -->
-          <div style="width: 100%; box-sizing: border-box; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 8px; margin-bottom: 6px; font-size: 8.5px; color: #334155; line-height: 1.35;">
-            <strong style="color: #0f1d33;">FILTROS APLICADOS:</strong> ${filterDescription}
-          </div>
+          <!-- Filter Description (Flush width, vertically centered, generous padding) -->
+          <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; margin-bottom: 6px; table-layout: fixed; box-sizing: border-box;">
+            <tr>
+              <td style="padding: 6px 10px; font-size: 8.5px; line-height: 1.4; vertical-align: middle; color: #334155;">
+                <span style="font-weight: 900; color: #0f1d33; text-transform: uppercase; letter-spacing: 0.2px;">FILTROS APLICADOS:</span>
+                <span style="font-weight: 500; color: #334155; margin-left: 4px;">${filterDescription}</span>
+              </td>
+            </tr>
+          </table>
 
           <!-- Patients Table -->
           <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; table-layout: fixed; margin-bottom: 6px; box-sizing: border-box;">
@@ -375,13 +393,17 @@ export const ReportsView: React.FC = () => {
           </table>
 
           <!-- Document Footer -->
-          <table style="width: 100%; border-top: 1.5px solid #cbd5e1; padding-top: 5px; margin-top: 6px; border-collapse: collapse; table-layout: fixed; box-sizing: border-box; font-size: 8.5px; color: #64748b;">
+          <table style="width: 100%; border-top: 1.5px solid #cbd5e1; padding-top: 6px; margin-top: 6px; border-collapse: collapse; table-layout: fixed; box-sizing: border-box; font-size: 8.5px; color: #64748b;">
             <tr>
-              <td style="text-align: left; vertical-align: middle;">
-                Sistema de Gestão e Controle de Pacientes · Emissão Eletrônica em ${dateFormatted} às ${timeFormatted} · Operador: ${currentUser?.name || 'Administrador Geral'}
+              <td style="text-align: left; vertical-align: middle; line-height: 1.3;">
+                <span style="color: #64748b;">Sistema de Gestão e Controle de Pacientes · Emissão Eletrônica em </span>
+                <span style="color: #334155; font-weight: 600;">${dateFormatted} às ${timeFormatted}</span>
+                <span style="color: #64748b;"> · Operador: </span>
+                <span style="color: #334155; font-weight: 600;">${currentUser?.name || 'Administrador Geral'}</span>
               </td>
-              <td style="text-align: right; vertical-align: middle; width: 170px;">
-                Total de Pacientes Listados: <strong>${filteredPatients.length}</strong>
+              <td style="text-align: right; vertical-align: middle; width: 180px; line-height: 1.3;">
+                <span style="color: #64748b;">Total de Pacientes Listados: </span>
+                <span style="color: #0f172a; font-weight: 800;">${filteredPatients.length}</span>
               </td>
             </tr>
           </table>
@@ -986,12 +1008,17 @@ export const ReportsView: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="text-right text-[11px] text-slate-600 bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5 leading-tight">
-                    <div>
-                      Protocolo: <code className="font-bold text-slate-800">{`REL-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${filteredPatients.length}`}</code>
+                  <div className="text-right text-[11px] text-slate-600 bg-slate-50 border border-slate-200 rounded-lg p-2.5 leading-snug shadow-2xs">
+                    <div className="pb-1 mb-1 border-b border-slate-200">
+                      <span className="font-bold text-slate-500 uppercase text-[10px]">Protocolo:</span>{' '}
+                      <code className="font-mono font-bold text-slate-900">{`REL-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${filteredPatients.length}`}</code>
                     </div>
                     <div>
-                      Emissão: <strong>{new Date().toLocaleDateString('pt-BR')} {new Date().toLocaleTimeString('pt-BR')}</strong> · Operador: <strong>{currentUser?.name || 'Administrador'}</strong>
+                      <span className="font-bold text-slate-500 uppercase text-[10px]">Emissão:</span>{' '}
+                      <strong className="text-slate-900 font-semibold">{new Date().toLocaleDateString('pt-BR')} {new Date().toLocaleTimeString('pt-BR')}</strong>
+                      <span className="text-slate-400 mx-1.5">·</span>
+                      <span className="font-bold text-slate-500 uppercase text-[10px]">Operador:</span>{' '}
+                      <strong className="text-slate-900 font-semibold">{currentUser?.name || 'Administrador'}</strong>
                     </div>
                   </div>
                 </div>
@@ -1025,8 +1052,8 @@ export const ReportsView: React.FC = () => {
                 </div>
 
                 {/* Filter Description Banner in Preview */}
-                <div className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-[11px] text-slate-700">
-                  <strong className="text-slate-900">FILTROS APLICADOS:</strong>{' '}
+                <div className="bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2.5 text-[11px] text-slate-700 leading-normal">
+                  <strong className="text-slate-900 uppercase font-black tracking-wide text-[10.5px]">FILTROS APLICADOS:</strong>{' '}
                   {selectedUnit !== 'ALL' && `Unidade: ${units.find((u) => u.id === selectedUnit)?.name || selectedUnit} · `}
                   {selectedStatus !== 'ALL' && `Status: ${selectedStatus} · `}
                   {selectedProcedure !== 'ALL' && `Procedimento: ${procedures.find((p) => p.id === selectedProcedure)?.name || selectedProcedure} · `}
@@ -1076,7 +1103,7 @@ export const ReportsView: React.FC = () => {
                                 ({age !== null ? `${age}a` : '-'})
                               </span>
                               {p.isUrgent && (
-                                <span className="ml-1.5 px-1 py-0.2 bg-rose-100 text-rose-700 border border-rose-300 rounded text-[9px] font-black">
+                                <span className="inline-flex items-center justify-center align-middle ml-1.5 px-1.5 py-0.5 bg-rose-100 text-rose-700 border border-rose-400 rounded text-[8.5px] font-black leading-none">
                                   URG
                                 </span>
                               )}

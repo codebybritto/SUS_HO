@@ -186,9 +186,9 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({
             </div>
           </div>
           <div class="meta-box">
-            <div><strong>Registro:</strong> <code>${prontuarioCode}</code></div>
-            <div><strong>Emissão:</strong> ${dateFormatted} às ${timeFormatted}</div>
-            <div><strong>Operador:</strong> ${currentUser?.name || 'Administrador'}</div>
+            <div><strong style="color:#475569;">Registro:</strong> <code style="color:#0f172a; font-weight:700;">${prontuarioCode}</code></div>
+            <div><strong style="color:#475569;">Emissão:</strong> <span style="color:#0f172a; font-weight:600;">${dateFormatted} às ${timeFormatted}</span></div>
+            <div><strong style="color:#475569;">Operador:</strong> <span style="color:#0f172a; font-weight:600;">${currentUser?.name || 'Administrador'}</span></div>
           </div>
         </div>
 
