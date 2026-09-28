@@ -159,7 +159,7 @@ export const INITIAL_DOCTORS: Doctor[] = [
   {
     id: 'doc-1-fabio-de-paula-lopes',
     name: 'Fabio de Paula Lopes',
-    crm: 'CRM-10000',
+    crm: '521057812',
     stateCrm: 'RJ',
     unitIds: ['unit-lagos'],
     specialty: 'Oftalmologia Geral e Cirúrgica',
@@ -169,7 +169,7 @@ export const INITIAL_DOCTORS: Doctor[] = [
   {
     id: 'doc-2-stefano-pinto-de-lim',
     name: 'Stefano Pinto de Lima Zvaig',
-    crm: 'CRM-10001',
+    crm: '52748480',
     stateCrm: 'RJ',
     unitIds: ['unit-lagos'],
     specialty: 'Oftalmologia Geral e Cirúrgica',
@@ -179,7 +179,7 @@ export const INITIAL_DOCTORS: Doctor[] = [
   {
     id: 'doc-3-vitor-sart-rio-costa',
     name: 'Vitor Sartório Costa',
-    crm: 'CRM-10002',
+    crm: '521225634',
     stateCrm: 'RJ',
     unitIds: ['unit-lagos'],
     specialty: 'Oftalmologia Geral e Cirúrgica',
@@ -189,7 +189,7 @@ export const INITIAL_DOCTORS: Doctor[] = [
   {
     id: 'doc-4-erica-magalhaes-dos-',
     name: 'Erica Magalhaes dos Santos',
-    crm: 'CRM-10003',
+    crm: '52963623',
     stateCrm: 'RJ',
     unitIds: ['unit-lagos'],
     specialty: 'Oftalmologia Geral e Cirúrgica',
@@ -199,7 +199,7 @@ export const INITIAL_DOCTORS: Doctor[] = [
   {
     id: 'doc-5-renato-pinheiro-hila',
     name: 'Renato Pinheiro Hilario de Souza',
-    crm: 'CRM-10004',
+    crm: '52916897',
     stateCrm: 'RJ',
     unitIds: ['unit-lagos'],
     specialty: 'Oftalmologia Geral e Cirúrgica',
@@ -209,7 +209,7 @@ export const INITIAL_DOCTORS: Doctor[] = [
   {
     id: 'doc-6-gustavo-andrade-lope',
     name: 'Gustavo Andrade Lopes',
-    crm: 'CRM-10005',
+    crm: '5201070010',
     stateCrm: 'RJ',
     unitIds: ['unit-lagos'],
     specialty: 'Oftalmologia Geral e Cirúrgica',
@@ -219,7 +219,7 @@ export const INITIAL_DOCTORS: Doctor[] = [
   {
     id: 'doc-7-jos--carlos-vieira-r',
     name: 'José Carlos Vieira Romeiro',
-    crm: 'CRM-10006',
+    crm: '52236746',
     stateCrm: 'RJ',
     unitIds: ['unit-lagos'],
     specialty: 'Oftalmologia Geral e Cirúrgica',
@@ -229,7 +229,7 @@ export const INITIAL_DOCTORS: Doctor[] = [
   {
     id: 'doc-8-guilherme-vieira-rom',
     name: 'Guilherme Vieira Romeiro',
-    crm: 'CRM-10007',
+    crm: '521057553',
     stateCrm: 'RJ',
     unitIds: ['unit-lagos'],
     specialty: 'Oftalmologia Geral e Cirúrgica',
@@ -239,7 +239,7 @@ export const INITIAL_DOCTORS: Doctor[] = [
   {
     id: 'doc-9-vict-ria-vieira-rome',
     name: 'Victória Vieira Romeiro',
-    crm: 'CRM-10008',
+    crm: '521138197',
     stateCrm: 'RJ',
     unitIds: ['unit-lagos'],
     specialty: 'Oftalmologia Geral e Cirúrgica',
@@ -249,7 +249,7 @@ export const INITIAL_DOCTORS: Doctor[] = [
   {
     id: 'doc-10-joao-lucas-mota-avel',
     name: 'Joao Lucas Mota Avelino',
-    crm: '520123020-4',
+    crm: '5201230204',
     stateCrm: 'RJ',
     unitIds: ['unit-lagos', 'unit-sjm'],
     specialty: 'Oftalmologia Geral e Cirúrgica',
@@ -259,7 +259,7 @@ export const INITIAL_DOCTORS: Doctor[] = [
   {
     id: 'doc-11-laura-brito-fiszer-p',
     name: 'Laura Brito Fiszer Poly Ferreira',
-    crm: 'CRM-10010',
+    crm: '10010',
     stateCrm: 'RJ',
     unitIds: ['unit-lagos', 'unit-sjm'],
     specialty: 'Oftalmologia Geral e Cirúrgica',
@@ -289,7 +289,7 @@ export const INITIAL_DOCTORS: Doctor[] = [
   {
     id: 'doc-14-marco-aurelio-alves-',
     name: 'Marco Aurelio Alves Ferreira Filho',
-    crm: '52.0110593-0',
+    crm: '5201105930',
     stateCrm: 'RJ',
     unitIds: ['unit-lagos', 'unit-sjm', 'unit-mage'],
     specialty: 'Oftalmologia Geral e Cirúrgica',
@@ -299,7 +299,7 @@ export const INITIAL_DOCTORS: Doctor[] = [
   {
     id: 'doc-15-karen-de-souza-horta',
     name: 'Karen de Souza Horta',
-    crm: '52104339-0',
+    crm: '521043390',
     stateCrm: 'RJ',
     unitIds: ['unit-lagos', 'unit-sjm', 'unit-mage'],
     specialty: 'Oftalmologia Geral e Cirúrgica',
@@ -319,7 +319,7 @@ export const INITIAL_DOCTORS: Doctor[] = [
   {
     id: 'doc-17-fernanda-roessler-se',
     name: 'Fernanda Roessler Sebastiao',
-    crm: '52.660.493',
+    crm: '52660493',
     stateCrm: 'RJ',
     unitIds: ['unit-sjm'],
     specialty: 'Oftalmologia Geral e Cirúrgica',
@@ -339,7 +339,7 @@ export const INITIAL_DOCTORS: Doctor[] = [
   {
     id: 'doc-19-gabriela-fassini-vil',
     name: 'Gabriela Fassini Vilas Boas Chagas',
-    crm: '52.779.270',
+    crm: '52779270',
     stateCrm: 'RJ',
     unitIds: ['unit-sjm'],
     specialty: 'Oftalmologia Geral e Cirúrgica',
@@ -349,7 +349,7 @@ export const INITIAL_DOCTORS: Doctor[] = [
   {
     id: 'doc-20-renata-monteiro-viei',
     name: 'Renata Monteiro Vieira',
-    crm: '52.650.919',
+    crm: '52650919',
     stateCrm: 'RJ',
     unitIds: ['unit-sjm'],
     specialty: 'Oftalmologia Geral e Cirúrgica',
@@ -359,7 +359,7 @@ export const INITIAL_DOCTORS: Doctor[] = [
   {
     id: 'doc-21-risla-de-oliveira-go',
     name: 'Risla de Oliveira Gomes',
-    crm: '52.650.943',
+    crm: '52650943',
     stateCrm: 'RJ',
     unitIds: ['unit-sjm'],
     specialty: 'Oftalmologia Geral e Cirúrgica',
@@ -369,7 +369,7 @@ export const INITIAL_DOCTORS: Doctor[] = [
   {
     id: 'doc-22-laila-denise-oliveir',
     name: 'Laila Denise Oliveira de Andrade Kelm',
-    crm: '52-01170783',
+    crm: '5201170783',
     stateCrm: 'RJ',
     unitIds: ['unit-mage'],
     specialty: 'Oftalmologia Geral e Cirúrgica',
@@ -379,7 +379,7 @@ export const INITIAL_DOCTORS: Doctor[] = [
   {
     id: 'doc-23-wilson-vial-filho',
     name: 'Wilson Vial Filho',
-    crm: '52.957.330',
+    crm: '52957330',
     stateCrm: 'RJ',
     unitIds: ['unit-mage'],
     specialty: 'Oftalmologia Geral e Cirúrgica',
@@ -412,6 +412,26 @@ export const INITIAL_DOCTORS: Doctor[] = [
     crm: '521164864',
     stateCrm: 'RJ',
     unitIds: ['unit-mage'],
+    specialty: 'Oftalmologia Geral e Cirúrgica',
+    active: true,
+    phone: '',
+  },
+  {
+    id: 'doc-27-thayane-azeredo-sil',
+    name: 'Thayane Azeredo Silva',
+    crm: '521041096',
+    stateCrm: 'RJ',
+    unitIds: ['unit-lagos'],
+    specialty: 'Oftalmologia Geral e Cirúrgica',
+    active: true,
+    phone: '',
+  },
+  {
+    id: 'doc-28-leticia-paola-kolln',
+    name: 'Leticia Paola Kolln',
+    crm: '5201174509',
+    stateCrm: 'RJ',
+    unitIds: ['unit-lagos'],
     specialty: 'Oftalmologia Geral e Cirúrgica',
     active: true,
     phone: '',

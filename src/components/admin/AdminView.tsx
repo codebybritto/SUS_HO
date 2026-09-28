@@ -1480,7 +1480,7 @@ const DoctorModal: React.FC<{
     }
     onSave({
       name: name.trim(),
-      crm: crm.trim(),
+      crm: crm.replace(/\D/g, ''),
       stateCrm: stateCrm.trim().toUpperCase(),
       specialty: specialty.trim(),
       unitIds: selectedUnits,
@@ -1507,11 +1507,12 @@ const DoctorModal: React.FC<{
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div className="col-span-2">
-              <label className="block text-slate-700 font-semibold mb-1">CRM *</label>
+              <label className="block text-slate-700 font-semibold mb-1">CRM (somente números) *</label>
               <input
                 type="text"
                 value={crm}
-                onChange={(e) => setCrm(e.target.value)}
+                onChange={(e) => setCrm(e.target.value.replace(/\D/g, ''))}
+                placeholder="Ex: 521057812"
                 className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 font-mono"
                 required
               />
