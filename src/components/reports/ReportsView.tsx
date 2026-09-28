@@ -258,12 +258,16 @@ export const ReportsView: React.FC = () => {
             size: A4 ${orientation};
             margin: 8mm 6mm;
           }
+          html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            background: #ffffff;
+          }
           body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             color: #0f172a;
-            background: #ffffff;
-            margin: 0;
-            padding: ${isLand ? '8px 12px' : '8px 8px'};
+            padding: ${isLand ? '8px 10px' : '8px 6px'};
             font-size: 9px;
             line-height: 1.3;
             -webkit-print-color-adjust: exact !important;
@@ -288,91 +292,99 @@ export const ReportsView: React.FC = () => {
         </style>
       </head>
       <body>
-        <!-- Header -->
-        <table style="width: 100%; border-bottom: 2px solid #0f1d33; padding-bottom: 6px; margin-bottom: 6px; border-collapse: collapse;">
-          <tr>
-            <td style="vertical-align: middle; text-align: left;">
-              <table style="border-collapse: collapse;">
-                <tr>
-                  <td style="vertical-align: middle; padding-right: 10px;">
-                    <img src="${LOGO_BASE64}" alt="Brasão Oficial" style="height: 42px; width: auto; max-width: 52px; object-fit: contain; display: block;" />
-                  </td>
-                  <td style="vertical-align: middle;">
-                    <div style="font-size: 14px; font-weight: 900; color: #0f1d33; text-transform: uppercase; letter-spacing: -0.3px;">Relatório Geral de Pacientes</div>
-                    <div style="font-size: 9px; color: #475569; font-weight: 600; margin-top: 1px;">Controle de Fluxo e Linha do Tempo Ambulatorial · ${unitObj ? `${unitObj.name}` : 'Todas as Unidades Autorizadas'}</div>
-                  </td>
-                </tr>
-              </table>
-            </td>
-            <td style="vertical-align: middle; text-align: right; width: 330px;">
-              <div style="font-size: 8.5px; color: #334155; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 8px; line-height: 1.35; display: inline-block; text-align: right;">
-                <div><strong>Protocolo:</strong> <code style="font-family: monospace; font-weight: bold; color: #0f172a;">${reportCode}</code></div>
-                <div><strong>Emissão:</strong> ${dateFormatted} às ${timeFormatted} · <strong>Operador:</strong> ${currentUser?.name || 'Administrador'}</div>
-              </div>
-            </td>
-          </tr>
-        </table>
-
-        <!-- Structured KPI Strip (Table-based for guaranteed stability, zero clipping) -->
-        <table style="width: 100%; border-collapse: separate; border-spacing: 4px; margin-bottom: 5px; table-layout: fixed;">
-          <tr>
-            <td style="background: #f8fafc; border: 1px solid #cbd5e1; border-left: 3.5px solid #0f1d33; border-radius: 4px; padding: 4px 6px; text-align: center;">
-              <div style="font-size: 7.5px; font-weight: 700; color: #64748b; text-transform: uppercase;">Total</div>
-              <div style="font-size: 11.5px; font-weight: 900; color: #0f1d33;">${summary.total}</div>
-            </td>
-            <td style="background: #f0f9ff; border: 1px solid #bae6fd; border-left: 3.5px solid #0284c7; border-radius: 4px; padding: 4px 6px; text-align: center;">
-              <div style="font-size: 7.5px; font-weight: 700; color: #0369a1; text-transform: uppercase;">Agendados</div>
-              <div style="font-size: 11.5px; font-weight: 900; color: #0284c7;">${summary.agendados}</div>
-            </td>
-            <td style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 3.5px solid #16a34a; border-radius: 4px; padding: 4px 6px; text-align: center;">
-              <div style="font-size: 7.5px; font-weight: 700; color: #15803d; text-transform: uppercase;">Regulados</div>
-              <div style="font-size: 11.5px; font-weight: 900; color: #16a34a;">${summary.regulados}</div>
-            </td>
-            <td style="background: #fffbeb; border: 1px solid #fde68a; border-left: 3.5px solid #d97706; border-radius: 4px; padding: 4px 6px; text-align: center;">
-              <div style="font-size: 7.5px; font-weight: 700; color: #b45309; text-transform: uppercase;">Micrologos</div>
-              <div style="font-size: 11.5px; font-weight: 900; color: #d97706;">${summary.micrologos}</div>
-            </td>
-            <td style="background: #fff1f2; border: 1px solid #fecdd3; border-left: 3.5px solid #e11d48; border-radius: 4px; padding: 4px 6px; text-align: center;">
-              <div style="font-size: 7.5px; font-weight: 700; color: #be123c; text-transform: uppercase;">Sem Contato</div>
-              <div style="font-size: 11.5px; font-weight: 900; color: #e11d48;">${summary.semInteracao}</div>
-            </td>
-            <td style="background: #fef2f2; border: 1px solid #fecaca; border-left: 3.5px solid #dc2626; border-radius: 4px; padding: 4px 6px; text-align: center;">
-              <div style="font-size: 7.5px; font-weight: 700; color: #b91c1c; text-transform: uppercase;">Urgentes</div>
-              <div style="font-size: 11.5px; font-weight: 900; color: #dc2626;">${summary.urgentes}</div>
-            </td>
-          </tr>
-        </table>
-
-        <!-- Filter Description (Rock-solid layout without text truncation) -->
-        <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 8px; margin-bottom: 6px; font-size: 8.5px; color: #334155; line-height: 1.35;">
-          <strong style="color: #0f1d33;">FILTROS APLICADOS:</strong> ${filterDescription}
-        </div>
-
-        <!-- Patients Table -->
-        <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; table-layout: fixed; margin-bottom: 6px;">
-          <thead>
-            <tr style="background: #0f1d33; color: #ffffff;">
-              <th style="width: ${isLand ? '3.5%' : '4%'}; padding: 6px 4px; font-size: 8.5px; font-weight: 800; text-align: center; border: 1px solid #0f1d33; text-transform: uppercase;">#</th>
-              <th style="width: ${isLand ? '22%' : '22%'}; padding: 6px 6px; font-size: 8.5px; font-weight: 800; text-align: left; border: 1px solid #0f1d33; text-transform: uppercase;">Paciente (Idade)</th>
-              <th style="width: ${isLand ? '28%' : '26%'}; padding: 6px 6px; font-size: 8.5px; font-weight: 800; text-align: left; border: 1px solid #0f1d33; text-transform: uppercase;">Procedimento(s) & Olho</th>
-              <th style="width: ${isLand ? '18%' : '17%'}; padding: 6px 6px; font-size: 8.5px; font-weight: 800; text-align: left; border: 1px solid #0f1d33; text-transform: uppercase;">Município / Unidade</th>
-              <th style="width: ${isLand ? '15%' : '16%'}; padding: 6px 6px; font-size: 8.5px; font-weight: 800; text-align: left; border: 1px solid #0f1d33; text-transform: uppercase;">Médico / Solicitação</th>
-              <th style="width: ${isLand ? '9%' : '10%'}; padding: 6px 4px; font-size: 8.5px; font-weight: 800; text-align: center; border: 1px solid #0f1d33; text-transform: uppercase;">Status</th>
-              <th style="width: ${isLand ? '4.5%' : '5%'}; padding: 6px 4px; font-size: 8.5px; font-weight: 800; text-align: center; border: 1px solid #0f1d33; text-transform: uppercase;">Cont./Falt.</th>
+        <div style="width: 100%; max-width: 100%; box-sizing: border-box; margin: 0; padding: 0;">
+          <!-- Header -->
+          <table style="width: 100%; border-bottom: 2px solid #0f1d33; padding-bottom: 6px; margin-bottom: 6px; border-collapse: collapse; table-layout: fixed; box-sizing: border-box;">
+            <tr>
+              <td style="vertical-align: middle; text-align: left; width: 62%;">
+                <table style="border-collapse: collapse;">
+                  <tr>
+                    <td style="vertical-align: middle; padding-right: 10px; width: 48px;">
+                      <img src="${LOGO_BASE64}" alt="Brasão Oficial" style="height: 42px; width: auto; max-width: 48px; object-fit: contain; display: block;" />
+                    </td>
+                    <td style="vertical-align: middle;">
+                      <div style="font-size: 14px; font-weight: 900; color: #0f1d33; text-transform: uppercase; letter-spacing: -0.3px;">Relatório Geral de Pacientes</div>
+                      <div style="font-size: 9px; color: #475569; font-weight: 600; margin-top: 1px;">Controle de Fluxo e Linha do Tempo Ambulatorial · ${unitObj ? `${unitObj.name}` : 'Todas as Unidades Autorizadas'}</div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+              <td style="vertical-align: middle; text-align: right; width: 38%;">
+                <div style="font-size: 8.5px; color: #334155; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 8px; line-height: 1.35; display: inline-block; text-align: right;">
+                  <div><strong>Protocolo:</strong> <code style="font-family: monospace; font-weight: bold; color: #0f172a;">${reportCode}</code></div>
+                  <div><strong>Emissão:</strong> ${dateFormatted} às ${timeFormatted} · <strong>Operador:</strong> ${currentUser?.name || 'Administrador'}</div>
+                </div>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            ${
-              tableRows ||
-              '<tr><td colspan="7" style="text-align: center; padding: 16px; color: #64748b; font-size: 9.5px;">Nenhum paciente localizado para os critérios selecionados.</td></tr>'
-            }
-          </tbody>
-        </table>
+          </table>
 
-        <!-- Document Footer -->
-        <div style="border-top: 1.5px solid #cbd5e1; padding-top: 5px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 8.5px; color: #64748b;">
-          <div>Sistema de Gestão e Controle de Pacientes · Emissão Eletrônica em ${dateFormatted} às ${timeFormatted} · Operador: ${currentUser?.name || 'Administrador Geral'}</div>
-          <div>Total de Pacientes Listados: <strong>${filteredPatients.length}</strong></div>
+          <!-- Structured KPI Strip (Collapsed table, zero phantom lines, flush borders) -->
+          <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; table-layout: fixed; margin-bottom: 6px; box-sizing: border-box;">
+            <tr>
+              <td style="width: 16.66%; background: #f8fafc; border: 1px solid #cbd5e1; padding: 5px 2px; text-align: center;">
+                <div style="font-size: 7.5px; font-weight: 700; color: #64748b; text-transform: uppercase;">Total</div>
+                <div style="font-size: 11.5px; font-weight: 900; color: #0f1d33;">${summary.total}</div>
+              </td>
+              <td style="width: 16.66%; background: #f0f9ff; border: 1px solid #cbd5e1; padding: 5px 2px; text-align: center;">
+                <div style="font-size: 7.5px; font-weight: 700; color: #0369a1; text-transform: uppercase;">Agendados</div>
+                <div style="font-size: 11.5px; font-weight: 900; color: #0284c7;">${summary.agendados}</div>
+              </td>
+              <td style="width: 16.66%; background: #f0fdf4; border: 1px solid #cbd5e1; padding: 5px 2px; text-align: center;">
+                <div style="font-size: 7.5px; font-weight: 700; color: #15803d; text-transform: uppercase;">Regulados</div>
+                <div style="font-size: 11.5px; font-weight: 900; color: #16a34a;">${summary.regulados}</div>
+              </td>
+              <td style="width: 16.66%; background: #fffbeb; border: 1px solid #cbd5e1; padding: 5px 2px; text-align: center;">
+                <div style="font-size: 7.5px; font-weight: 700; color: #b45309; text-transform: uppercase;">Micrologos</div>
+                <div style="font-size: 11.5px; font-weight: 900; color: #d97706;">${summary.micrologos}</div>
+              </td>
+              <td style="width: 16.66%; background: #fff1f2; border: 1px solid #cbd5e1; padding: 5px 2px; text-align: center;">
+                <div style="font-size: 7.5px; font-weight: 700; color: #be123c; text-transform: uppercase;">Sem Contato</div>
+                <div style="font-size: 11.5px; font-weight: 900; color: #e11d48;">${summary.semInteracao}</div>
+              </td>
+              <td style="width: 16.66%; background: #fef2f2; border: 1px solid #cbd5e1; padding: 5px 2px; text-align: center;">
+                <div style="font-size: 7.5px; font-weight: 700; color: #b91c1c; text-transform: uppercase;">Urgentes</div>
+                <div style="font-size: 11.5px; font-weight: 900; color: #dc2626;">${summary.urgentes}</div>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Filter Description (Flush width, no overflow clipping) -->
+          <div style="width: 100%; box-sizing: border-box; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 8px; margin-bottom: 6px; font-size: 8.5px; color: #334155; line-height: 1.35;">
+            <strong style="color: #0f1d33;">FILTROS APLICADOS:</strong> ${filterDescription}
+          </div>
+
+          <!-- Patients Table -->
+          <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; table-layout: fixed; margin-bottom: 6px; box-sizing: border-box;">
+            <thead>
+              <tr style="background: #0f1d33; color: #ffffff;">
+                <th style="width: ${isLand ? '3%' : '3.5%'}; padding: 6px 3px; font-size: 8.5px; font-weight: 800; text-align: center; border: 1px solid #0f1d33; text-transform: uppercase; white-space: nowrap;">#</th>
+                <th style="width: ${isLand ? '22%' : '23%'}; padding: 6px 5px; font-size: 8.5px; font-weight: 800; text-align: left; border: 1px solid #0f1d33; text-transform: uppercase;">Paciente (Idade)</th>
+                <th style="width: ${isLand ? '28%' : '27%'}; padding: 6px 5px; font-size: 8.5px; font-weight: 800; text-align: left; border: 1px solid #0f1d33; text-transform: uppercase;">Procedimento(s) & Olho</th>
+                <th style="width: ${isLand ? '18%' : '17%'}; padding: 6px 5px; font-size: 8.5px; font-weight: 800; text-align: left; border: 1px solid #0f1d33; text-transform: uppercase;">Município / Unidade</th>
+                <th style="width: ${isLand ? '16%' : '15%'}; padding: 6px 5px; font-size: 8.5px; font-weight: 800; text-align: left; border: 1px solid #0f1d33; text-transform: uppercase;">Médico / Solicitação</th>
+                <th style="width: ${isLand ? '8%' : '8.5%'}; padding: 6px 3px; font-size: 8.5px; font-weight: 800; text-align: center; border: 1px solid #0f1d33; text-transform: uppercase; white-space: nowrap;">Status</th>
+                <th style="width: ${isLand ? '5%' : '6%'}; padding: 6px 2px; font-size: 8px; font-weight: 800; text-align: center; border: 1px solid #0f1d33; text-transform: uppercase; white-space: nowrap;">Cont./Falt.</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${
+                tableRows ||
+                '<tr><td colspan="7" style="text-align: center; padding: 16px; color: #64748b; font-size: 9.5px;">Nenhum paciente localizado para os critérios selecionados.</td></tr>'
+              }
+            </tbody>
+          </table>
+
+          <!-- Document Footer -->
+          <table style="width: 100%; border-top: 1.5px solid #cbd5e1; padding-top: 5px; margin-top: 6px; border-collapse: collapse; table-layout: fixed; box-sizing: border-box; font-size: 8.5px; color: #64748b;">
+            <tr>
+              <td style="text-align: left; vertical-align: middle;">
+                Sistema de Gestão e Controle de Pacientes · Emissão Eletrônica em ${dateFormatted} às ${timeFormatted} · Operador: ${currentUser?.name || 'Administrador Geral'}
+              </td>
+              <td style="text-align: right; vertical-align: middle; width: 170px;">
+                Total de Pacientes Listados: <strong>${filteredPatients.length}</strong>
+              </td>
+            </tr>
+          </table>
         </div>
       </body>
       </html>

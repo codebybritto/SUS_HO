@@ -13,6 +13,8 @@ interface AuthContextType {
   switchUser: (userId: string) => void;
   login: (login: string, pass?: string) => boolean;
   logout: () => void;
+  sessionExpiredMessage: string | null;
+  clearSessionExpiredMessage: () => void;
   hasPermission: (permission: keyof UserPermissions) => boolean;
   canAccessUnit: (unitId: string) => boolean;
   changeOwnPassword: (newPassword: string) => Promise<boolean>;
@@ -26,10 +28,14 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// 15 minutes inactivity timeout for clinical regulation compliance
+const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(() => storageService.getCurrentUser());
   const [allUnits, setAllUnits] = useState<Unit[]>(() => storageService.getUnits());
   const [activeUnitId, setActiveUnitIdState] = useState<string | 'ALL'>('ALL');
+  const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(null);
 
   useEffect(() => {
     // Refresh units in case updated
@@ -80,6 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (pass && user.password && user.password !== pass) {
         return false;
       }
+      setSessionExpiredMessage(null);
       setCurrentUser(user);
       storageService.setCurrentUser(user);
       return true;
@@ -91,6 +98,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCurrentUser(null);
     storageService.setCurrentUser(null);
   };
+
+  const clearSessionExpiredMessage = () => {
+    setSessionExpiredMessage(null);
+  };
+
+  // 15-Minute Inactivity Session Timeout Effect
+  useEffect(() => {
+    if (!currentUser) return;
+
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const resetTimer = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setSessionExpiredMessage(
+          'Sua sessão foi encerrada automaticamente por inatividade (15 minutos) para garantir a segurança dos dados clínicos.'
+        );
+        setCurrentUser(null);
+        storageService.setCurrentUser(null);
+      }, INACTIVITY_TIMEOUT_MS);
+    };
+
+    const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
+    events.forEach((ev) => window.addEventListener(ev, resetTimer, { passive: true }));
+    resetTimer();
+
+    return () => {
+      clearTimeout(timeoutId);
+      events.forEach((ev) => window.removeEventListener(ev, resetTimer));
+    };
+  }, [currentUser]);
 
   const hasPermission = (permission: keyof UserPermissions): boolean => {
     if (!currentUser) return false;
@@ -186,6 +224,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         switchUser,
         login,
         logout,
+        sessionExpiredMessage,
+        clearSessionExpiredMessage,
         hasPermission,
         canAccessUnit,
         changeOwnPassword,

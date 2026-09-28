@@ -111,14 +111,22 @@ export async function exportHtmlToPdf(
 
     // Slicing canvas per page for crystal clear pagination without clipping
     const pageCanvasHeight = Math.floor((printableHeight * canvas.width) / printableWidth);
-    const totalPages = Math.max(1, Math.ceil(canvas.height / pageCanvasHeight));
+
+    // Avoid generating an accidental blank page when canvas.height exceeds by just a few trailing pixels (e.g. margin/padding)
+    const basePages = Math.floor(canvas.height / pageCanvasHeight);
+    const trailingPixels = canvas.height - basePages * pageCanvasHeight;
+    // Only add a new page if the overflow has substantial content (> 80px)
+    const totalPages = Math.max(1, trailingPixels > 80 ? basePages + 1 : basePages);
 
     for (let i = 0; i < totalPages; i++) {
       if (i > 0) {
         pdf.addPage();
       }
       const sY = i * pageCanvasHeight;
-      const sHeight = Math.min(pageCanvasHeight, canvas.height - sY);
+      // On the last page, capture all remaining content cleanly
+      const sHeight = i === totalPages - 1
+        ? Math.min(pageCanvasHeight, canvas.height - sY)
+        : pageCanvasHeight;
 
       // Create high-res canvas slice for this page
       const pageCanvas = document.createElement('canvas');

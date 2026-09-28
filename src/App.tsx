@@ -23,7 +23,7 @@ import { AppLogo } from './components/common/AppLogo';
 import { Lock, User, ShieldCheck, ArrowRight, CheckCircle2, AlertCircle, KeyRound, HelpCircle, X, LogOut } from 'lucide-react';
 
 const MainAppContent: React.FC = () => {
-  const { currentUser, login } = useAuth();
+  const { currentUser, login, sessionExpiredMessage, clearSessionExpiredMessage } = useAuth();
   const { patients, users } = useApp();
 
   const [currentTab, setCurrentTab] = useState<MainTab>('dashboard');
@@ -60,6 +60,7 @@ const MainAppContent: React.FC = () => {
     const handleLoginSubmit = (e: React.FormEvent) => {
       e.preventDefault();
       setLoginError('');
+      clearSessionExpiredMessage();
       const success = login(loginInput, passwordInput);
       if (!success) {
         setLoginError('Credenciais inválidas ou usuário inativo. Utilize uma das contas de demonstração abaixo.');
@@ -70,6 +71,7 @@ const MainAppContent: React.FC = () => {
       setLoginInput(userLogin);
       setPasswordInput('123');
       setLoginError('');
+      clearSessionExpiredMessage();
       login(userLogin, '123');
     };
 
@@ -94,6 +96,13 @@ const MainAppContent: React.FC = () => {
           </div>
 
           <div className="p-7 space-y-6">
+            {sessionExpiredMessage && (
+              <div className="p-3 bg-amber-50 border border-amber-300 text-amber-900 text-xs rounded-xl flex items-center gap-2 animate-in fade-in duration-200">
+                <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+                <span>{sessionExpiredMessage}</span>
+              </div>
+            )}
+
             {loginError && (
               <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />

@@ -155,42 +155,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearchSelectPatient }) => {
             <AppLogo variant="full" size="md" theme="dark" />
           </div>
 
-          {/* Environment Switcher: Base Real vs Simulação */}
-          <div className="flex items-center bg-slate-900/90 rounded-lg p-0.5 border border-slate-700/80">
-            <button
-              type="button"
-              onClick={() => setDatabaseMode('real')}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-semibold transition-all ${
-                databaseMode === 'real'
-                  ? 'bg-emerald-600 text-white shadow-xs font-bold'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-              title="Base Real de Pacientes Oficiais"
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-white" />
-              <span>Base Real</span>
-              <span className="text-[9px] px-1.5 py-0.2 rounded bg-black/25 font-mono">
-                {allPatientsCount.real}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setDatabaseMode('simulation')}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-semibold transition-all ${
-                databaseMode === 'simulation'
-                  ? 'bg-amber-500 text-slate-950 font-black shadow-xs'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-              title="Base de Simulação para Demonstração e Treinamento"
-            >
-              <FlaskConical className="w-3.5 h-3.5" />
-              <span>Simulação</span>
-              <span className="text-[9px] px-1.5 py-0.2 rounded bg-black/25 font-mono">
-                {allPatientsCount.simulation}
-              </span>
-            </button>
-          </div>
-
           {/* Global Quick Search */}
           <div className="relative flex-1 max-w-sm hidden xl:block">
             <div className="relative">
@@ -548,38 +512,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearchSelectPatient }) => {
           </div>
         </div>
       </header>
-
-      {/* Simulation Banner Notice */}
-      {databaseMode === 'simulation' && (
-        <div className="bg-amber-400 text-slate-950 px-4 py-2 text-xs font-medium flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-sm border-b border-amber-500 no-print">
-          <div className="flex items-center gap-2">
-            <FlaskConical className="w-4 h-4 text-slate-950 shrink-0" />
-            <span>
-              <strong>AMBIENTE DE SIMULAÇÃO / DEMONSTRAÇÃO ATIVO:</strong> Os dados exibidos e criados são fictícios para apresentação à coordenação. A <strong>Base Real</strong> permanece 100% protegida e isolada.
-            </span>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => {
-                if (window.confirm('Deseja recarregar os dados padrão de demonstração para os pacientes simulados?')) {
-                  resetSimulationPatients();
-                }
-              }}
-              className="px-2.5 py-1 bg-slate-950 text-amber-300 hover:bg-slate-900 rounded-md text-[11px] font-bold transition-colors shadow-xs"
-            >
-              Restaurar Pacientes de Exemplo
-            </button>
-            <button
-              type="button"
-              onClick={() => setDatabaseMode('real')}
-              className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-slate-950 rounded-md text-[11px] font-bold transition-colors underline"
-            >
-              Ir para Base Real
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Change Password Modal (Self) */}
       {isChangePasswordModalOpen && (

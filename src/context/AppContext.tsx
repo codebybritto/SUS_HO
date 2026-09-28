@@ -131,14 +131,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  // Visible patients based on active database mode (Real vs Simulação)
+  // Unified visible patients: all active records available without simulation filtering
   const visiblePatients = React.useMemo(() => {
-    if (databaseMode === 'real') {
-      return patients.filter((p) => !p.isSimulation);
-    } else {
-      return patients.filter((p) => !!p.isSimulation);
-    }
-  }, [patients, databaseMode]);
+    return patients;
+  }, [patients]);
 
   const allPatientsCount = React.useMemo(() => {
     const real = patients.filter((p) => !p.isSimulation && !p.isDeleted).length;
