@@ -138,20 +138,7 @@ export const ReportsView: React.FC = () => {
     selectedFollowup,
   ]);
 
-  // Metrics on filtered result
-  const summary = useMemo(() => {
-    const total = filteredPatients.length;
-    const agendados = filteredPatients.filter((p) => p.currentStatus === 'Agendado').length;
-    const regulados = filteredPatients.filter((p) => p.currentStatus === 'Regulado').length;
-    const micrologos = filteredPatients.filter(
-      (p) => p.currentStatus === 'Aguardando Micrologos' || p.currentStatus === 'Micrologos'
-    ).length;
-    const urgentes = filteredPatients.filter((p) => p.isUrgent).length;
-    const semInteracao = filteredPatients.filter(
-      (p) => p.contactAttempts.length === 0 && p.evolutions.length === 0 && p.totalAbsences === 0
-    ).length;
-    return { total, agendados, regulados, micrologos, urgentes, semInteracao };
-  }, [filteredPatients]);
+
 
   const handleResetFilters = () => {
     setSelectedUnit('ALL');
@@ -204,8 +191,8 @@ export const ReportsView: React.FC = () => {
     const isLand = orientation === 'landscape';
 
     const colWidths = isLand
-      ? { num: '3%', pac: '22%', proc: '28%', mun: '18%', med: '16%', status: '8%', cont: '5%' }
-      : { num: '3%', pac: '24%', proc: '24%', mun: '16%', med: '14%', status: '11%', cont: '8%' };
+      ? { num: '3%', pac: '24%', proc: '26%', mun: '18%', med: '16%', status: '8%', cont: '5%' }
+      : { num: '3%', pac: '25%', proc: '23%', mun: '17%', med: '14%', status: '11%', cont: '7%' };
 
     const tableRows = filteredPatients
       .map((p, idx) => {
@@ -213,8 +200,8 @@ export const ReportsView: React.FC = () => {
         const age = calculateAge(p.birthDate);
         const procNames =
           p.procedures && p.procedures.length > 0
-            ? p.procedures.map((pr) => `<span>${pr.procedureName}</span> <strong style="font-size:8px; color:#475569;">[${pr.eyeSide}]</strong>`).join('; ')
-            : `<span>${p.requestedProcedureName}</span> <strong style="font-size:8px; color:#475569;">[${p.eyeSide}]</strong>`;
+            ? p.procedures.map((pr) => `<span>${pr.procedureName}</span>`).join('; ')
+            : `<span>${p.requestedProcedureName}</span>`;
 
         const contactCount = p.contactAttempts?.length || 0;
         const absenceCount = p.totalAbsences || p.absences?.length || 0;
@@ -335,36 +322,6 @@ export const ReportsView: React.FC = () => {
             </tr>
           </table>
 
-          <!-- Structured KPI Strip (Collapsed table, zero phantom lines, flush borders) -->
-          <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; table-layout: fixed; margin-bottom: 6px; box-sizing: border-box;">
-            <tr>
-              <td style="width: 16.66%; background: #f8fafc; border: 1px solid #cbd5e1; padding: 5px 2px 6px 2px; text-align: center; vertical-align: middle;">
-                <div style="font-size: 7.5px; font-weight: 800; color: #64748b; text-transform: uppercase; line-height: 1.2;">Total</div>
-                <div style="font-size: 12px; font-weight: 900; color: #0f1d33; line-height: 1.2; margin-top: 1px;">${summary.total}</div>
-              </td>
-              <td style="width: 16.66%; background: #f0f9ff; border: 1px solid #cbd5e1; padding: 5px 2px 6px 2px; text-align: center; vertical-align: middle;">
-                <div style="font-size: 7.5px; font-weight: 800; color: #0369a1; text-transform: uppercase; line-height: 1.2;">Agendados</div>
-                <div style="font-size: 12px; font-weight: 900; color: #0284c7; line-height: 1.2; margin-top: 1px;">${summary.agendados}</div>
-              </td>
-              <td style="width: 16.66%; background: #f0fdf4; border: 1px solid #cbd5e1; padding: 5px 2px 6px 2px; text-align: center; vertical-align: middle;">
-                <div style="font-size: 7.5px; font-weight: 800; color: #15803d; text-transform: uppercase; line-height: 1.2;">Regulados</div>
-                <div style="font-size: 12px; font-weight: 900; color: #16a34a; line-height: 1.2; margin-top: 1px;">${summary.regulados}</div>
-              </td>
-              <td style="width: 16.66%; background: #fffbeb; border: 1px solid #cbd5e1; padding: 5px 2px 6px 2px; text-align: center; vertical-align: middle;">
-                <div style="font-size: 7.5px; font-weight: 800; color: #b45309; text-transform: uppercase; line-height: 1.2;">Micrologos</div>
-                <div style="font-size: 12px; font-weight: 900; color: #d97706; line-height: 1.2; margin-top: 1px;">${summary.micrologos}</div>
-              </td>
-              <td style="width: 16.66%; background: #fff1f2; border: 1px solid #cbd5e1; padding: 5px 2px 6px 2px; text-align: center; vertical-align: middle;">
-                <div style="font-size: 7.5px; font-weight: 800; color: #be123c; text-transform: uppercase; line-height: 1.2;">Sem Contato</div>
-                <div style="font-size: 12px; font-weight: 900; color: #e11d48; line-height: 1.2; margin-top: 1px;">${summary.semInteracao}</div>
-              </td>
-              <td style="width: 16.66%; background: #fef2f2; border: 1px solid #cbd5e1; padding: 5px 2px 6px 2px; text-align: center; vertical-align: middle;">
-                <div style="font-size: 7.5px; font-weight: 800; color: #b91c1c; text-transform: uppercase; line-height: 1.2;">Urgentes</div>
-                <div style="font-size: 12px; font-weight: 900; color: #dc2626; line-height: 1.2; margin-top: 1px;">${summary.urgentes}</div>
-              </td>
-            </tr>
-          </table>
-
           <!-- Filter Description (Flush width, vertically centered, generous padding) -->
           <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; margin-bottom: 6px; table-layout: fixed; box-sizing: border-box;">
             <tr>
@@ -381,7 +338,7 @@ export const ReportsView: React.FC = () => {
               <tr style="background: #0f1d33; color: #ffffff;">
                 <th style="width: ${colWidths.num}; padding: 6px 3px; font-size: ${isLand ? '8.5px' : '8px'}; font-weight: 800; text-align: center; border: 1px solid #0f1d33; text-transform: uppercase; white-space: nowrap;">#</th>
                 <th style="width: ${colWidths.pac}; padding: 6px 5px; font-size: ${isLand ? '8.5px' : '8px'}; font-weight: 800; text-align: left; border: 1px solid #0f1d33; text-transform: uppercase;">Paciente (Idade)</th>
-                <th style="width: ${colWidths.proc}; padding: 6px 5px; font-size: ${isLand ? '8.5px' : '8px'}; font-weight: 800; text-align: left; border: 1px solid #0f1d33; text-transform: uppercase;">Procedimento(s) & Olho</th>
+                <th style="width: ${colWidths.proc}; padding: 6px 5px; font-size: ${isLand ? '8.5px' : '8px'}; font-weight: 800; text-align: left; border: 1px solid #0f1d33; text-transform: uppercase;">Procedimento(s) Solicitado(s)</th>
                 <th style="width: ${colWidths.mun}; padding: 6px 5px; font-size: ${isLand ? '8.5px' : '8px'}; font-weight: 800; text-align: left; border: 1px solid #0f1d33; text-transform: uppercase;">Município / Unidade</th>
                 <th style="width: ${colWidths.med}; padding: 6px 5px; font-size: ${isLand ? '8.5px' : '8px'}; font-weight: 800; text-align: left; border: 1px solid #0f1d33; text-transform: uppercase;">Médico / Solicitação</th>
                 <th style="width: ${colWidths.status}; padding: 6px 2px; font-size: ${isLand ? '8.5px' : '8px'}; font-weight: 800; text-align: center; border: 1px solid #0f1d33; text-transform: uppercase; white-space: nowrap;">Status</th>
@@ -423,8 +380,8 @@ export const ReportsView: React.FC = () => {
       const age = calculateAge(p.birthDate);
       const procNames =
         p.procedures && p.procedures.length > 0
-          ? p.procedures.map((pr) => `${pr.procedureName} [${pr.eyeSide}]`).join('; ')
-          : `${p.requestedProcedureName} [${p.eyeSide}]`;
+          ? p.procedures.map((pr) => pr.procedureName).join('; ')
+          : p.requestedProcedureName;
 
       return {
         'Nome do Paciente': p.name,
@@ -777,41 +734,6 @@ export const ReportsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Summary KPI Cards Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Filtrado</span>
-          <div className="text-2xl font-black text-slate-900 mt-0.5">{summary.total}</div>
-        </div>
-
-        <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-sky-700">Agendados</span>
-          <div className="text-2xl font-black text-sky-900 mt-0.5">{summary.agendados}</div>
-        </div>
-
-        <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Regulados</span>
-          <div className="text-2xl font-black text-emerald-900 mt-0.5">{summary.regulados}</div>
-        </div>
-
-        <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700">
-            Aguard. Micrologos
-          </span>
-          <div className="text-2xl font-black text-amber-900 mt-0.5">{summary.micrologos}</div>
-        </div>
-
-        <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700">Sem Interação</span>
-          <div className="text-2xl font-black text-rose-900 mt-0.5">{summary.semInteracao}</div>
-        </div>
-
-        <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600">Urgentes</span>
-          <div className="text-2xl font-black text-rose-700 mt-0.5">{summary.urgentes}</div>
-        </div>
-      </div>
-
       {/* Styled Data Table with CNS/CPF removed & multiple procedures */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between">
@@ -828,7 +750,6 @@ export const ReportsView: React.FC = () => {
                 <th className="py-3 px-4">Nome do Paciente</th>
                 <th className="py-3 px-3">Nascimento (Idade)</th>
                 <th className="py-3 px-3">Procedimento(s) Solicitado(s)</th>
-                <th className="py-3 px-3 text-center whitespace-nowrap">Olho</th>
                 <th className="py-3 px-3">Município</th>
                 <th className="py-3 px-3">Médico</th>
                 <th className="py-3 px-3">Data Solicitada</th>
@@ -839,7 +760,7 @@ export const ReportsView: React.FC = () => {
             <tbody className="divide-y divide-slate-200">
               {filteredPatients.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-8 text-center text-slate-400">
+                  <td colSpan={8} className="py-8 text-center text-slate-400">
                     Nenhum paciente localizado com a combinação de filtros selecionada.
                   </td>
                 </tr>
@@ -873,25 +794,6 @@ export const ReportsView: React.FC = () => {
                         ) : (
                           <div className="min-h-[20px] flex items-center">
                             <span className="font-medium text-slate-800">{p.requestedProcedureName}</span>
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-3 px-3 text-center align-top pt-3.5">
-                        {p.procedures && p.procedures.length > 0 ? (
-                          <div className="space-y-1 flex flex-col items-center">
-                            {p.procedures.map((pr) => (
-                              <div key={pr.id} className="min-h-[20px] flex items-center justify-center">
-                                <span className="px-1.5 py-0.2 rounded font-mono text-[9px] bg-slate-100 text-slate-700 font-bold border border-slate-300">
-                                  {pr.eyeSide === 'AO' ? 'AO (Ambos)' : pr.eyeSide === 'OD' ? 'OD (Dir)' : 'OE (Esq)'}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="min-h-[20px] flex items-center justify-center">
-                            <span className="px-1.5 py-0.2 rounded font-mono text-[9px] bg-slate-100 text-slate-700 font-bold border border-slate-300">
-                              {p.eyeSide === 'AO' ? 'AO (Ambos)' : p.eyeSide === 'OD' ? 'OD (Dir)' : 'OE (Esq)'}
-                            </span>
                           </div>
                         )}
                       </td>
@@ -1041,34 +943,6 @@ export const ReportsView: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Structured KPI Strip in Preview */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-xs">
-                  <div className="bg-slate-50 border border-slate-200 border-l-4 border-l-slate-900 rounded-lg p-2 text-center">
-                    <div className="text-[10px] font-bold text-slate-500 uppercase">Total</div>
-                    <div className="text-sm font-black text-slate-900">{summary.total}</div>
-                  </div>
-                  <div className="bg-sky-50 border border-sky-200 border-l-4 border-l-sky-600 rounded-lg p-2 text-center">
-                    <div className="text-[10px] font-bold text-sky-700 uppercase">Agendados</div>
-                    <div className="text-sm font-black text-sky-700">{summary.agendados}</div>
-                  </div>
-                  <div className="bg-emerald-50 border border-emerald-200 border-l-4 border-l-emerald-600 rounded-lg p-2 text-center">
-                    <div className="text-[10px] font-bold text-emerald-700 uppercase">Regulados</div>
-                    <div className="text-sm font-black text-emerald-700">{summary.regulados}</div>
-                  </div>
-                  <div className="bg-amber-50 border border-amber-200 border-l-4 border-l-amber-600 rounded-lg p-2 text-center">
-                    <div className="text-[10px] font-bold text-amber-700 uppercase">Micrologos</div>
-                    <div className="text-sm font-black text-amber-700">{summary.micrologos}</div>
-                  </div>
-                  <div className="bg-rose-50 border border-rose-200 border-l-4 border-l-rose-600 rounded-lg p-2 text-center">
-                    <div className="text-[10px] font-bold text-rose-700 uppercase">Sem Contato</div>
-                    <div className="text-sm font-black text-rose-700">{summary.semInteracao}</div>
-                  </div>
-                  <div className="bg-red-50 border border-red-200 border-l-4 border-l-red-600 rounded-lg p-2 text-center">
-                    <div className="text-[10px] font-bold text-red-700 uppercase">Urgentes</div>
-                    <div className="text-sm font-black text-red-700">{summary.urgentes}</div>
-                  </div>
-                </div>
-
                 {/* Filter Description Banner in Preview */}
                 <div className="bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-2.5 text-[11px] text-slate-700 leading-normal">
                   <strong className="text-slate-900 uppercase font-black tracking-wide text-[10.5px]">FILTROS APLICADOS:</strong>{' '}
@@ -1086,7 +960,7 @@ export const ReportsView: React.FC = () => {
                     <tr>
                       <th className="p-2 w-8 text-center">#</th>
                       <th className="p-2">Paciente (Idade)</th>
-                      <th className="p-2">Procedimento(s) & Olho</th>
+                      <th className="p-2">Procedimento(s) Solicitado(s)</th>
                       <th className="p-2">Município / Unidade</th>
                       <th className="p-2">Médico / Solicitação</th>
                       <th className="p-2 text-center">Status</th>
@@ -1106,8 +980,8 @@ export const ReportsView: React.FC = () => {
                         const age = calculateAge(p.birthDate);
                         const procNames =
                           p.procedures && p.procedures.length > 0
-                            ? p.procedures.map((pr) => `${pr.procedureName} [${pr.eyeSide}]`).join('; ')
-                            : `${p.requestedProcedureName} [${p.eyeSide}]`;
+                            ? p.procedures.map((pr) => pr.procedureName).join('; ')
+                            : p.requestedProcedureName;
                         const contactCount = p.contactAttempts?.length || 0;
                         const absenceCount = p.totalAbsences || p.absences?.length || 0;
                         const shortUnit = p.unitName ? p.unitName.split('—')[0].trim() : '-';
