@@ -73,34 +73,36 @@ const municipalities = [
 // ==========================================
 const doctors = [
   // Lagos
-  { name: 'Fabio de Paula Lopes', unit_ids: ['unit-lagos'] },
-  { name: 'Stefano Pinto de Lima Zvaig', unit_ids: ['unit-lagos'] },
-  { name: 'Vitor Sartório Costa', unit_ids: ['unit-lagos'] },
-  { name: 'Erica Magalhaes dos Santos', unit_ids: ['unit-lagos'] },
-  { name: 'Renato Pinheiro Hilario de Souza', unit_ids: ['unit-lagos'] },
-  { name: 'Gustavo Andrade Lopes', unit_ids: ['unit-lagos'] },
-  { name: 'José Carlos Vieira Romeiro', unit_ids: ['unit-lagos'] },
-  { name: 'Guilherme Vieira Romeiro', unit_ids: ['unit-lagos'] },
-  { name: 'Victória Vieira Romeiro', unit_ids: ['unit-lagos'] },
+  { name: 'Fabio de Paula Lopes', unit_ids: ['unit-lagos'], crm: 'CRM-10000' },
+  { name: 'Stefano Pinto de Lima Zvaig', unit_ids: ['unit-lagos'], crm: 'CRM-10001' },
+  { name: 'Vitor Sartório Costa', unit_ids: ['unit-lagos'], crm: 'CRM-10002' },
+  { name: 'Erica Magalhaes dos Santos', unit_ids: ['unit-lagos'], crm: 'CRM-10003' },
+  { name: 'Renato Pinheiro Hilario de Souza', unit_ids: ['unit-lagos'], crm: 'CRM-10004' },
+  { name: 'Gustavo Andrade Lopes', unit_ids: ['unit-lagos'], crm: 'CRM-10005' },
+  { name: 'José Carlos Vieira Romeiro', unit_ids: ['unit-lagos'], crm: 'CRM-10006' },
+  { name: 'Guilherme Vieira Romeiro', unit_ids: ['unit-lagos'], crm: 'CRM-10007' },
+  { name: 'Victória Vieira Romeiro', unit_ids: ['unit-lagos'], crm: 'CRM-10008' },
   // Compartilhados Lagos + SJM
-  { name: 'Joao Lucas Mota Avelino', unit_ids: ['unit-lagos', 'unit-sjm'] },
-  { name: 'Laura Brito Fiszer Poly Ferreira', unit_ids: ['unit-lagos', 'unit-sjm'] },
+  { name: 'Joao Lucas Mota Avelino', unit_ids: ['unit-lagos', 'unit-sjm'], crm: '520123020-4' },
+  { name: 'Laura Brito Fiszer Poly Ferreira', unit_ids: ['unit-lagos', 'unit-sjm'], crm: 'CRM-10010' },
   // Compartilhados Lagos + SJM + Magé
-  { name: 'Kenedy de Almeida Alves', unit_ids: ['unit-lagos', 'unit-sjm', 'unit-mage'] },
-  { name: 'Miriã Bertoloto de Andrade', unit_ids: ['unit-lagos', 'unit-sjm', 'unit-mage'] },
-  { name: 'Marco Aurelio Alves Ferreira Filho', unit_ids: ['unit-lagos', 'unit-sjm', 'unit-mage'] },
-  { name: 'Karen de Souza Horta', unit_ids: ['unit-lagos', 'unit-sjm', 'unit-mage'] },
+  { name: 'Kenedy de Almeida Alves', unit_ids: ['unit-lagos', 'unit-sjm', 'unit-mage'], crm: '521213962' },
+  { name: 'Miriã Bertoloto de Andrade', unit_ids: ['unit-lagos', 'unit-sjm', 'unit-mage'], crm: '52016845' },
+  { name: 'Marco Aurelio Alves Ferreira Filho', unit_ids: ['unit-lagos', 'unit-sjm', 'unit-mage'], crm: '52.0110593-0' },
+  { name: 'Karen de Souza Horta', unit_ids: ['unit-lagos', 'unit-sjm', 'unit-mage'], crm: '52104339-0' },
   // SJM Exclusivos
-  { name: 'Danielle de Souza Cortez Godfroy', unit_ids: ['unit-sjm'] },
-  { name: 'Fernanda Roessler Sebastiao', unit_ids: ['unit-sjm'] },
-  { name: 'Fernando Gomez Rodriguez', unit_ids: ['unit-sjm'] },
-  { name: 'Gabriela Fassini Vilas Boas Chagas', unit_ids: ['unit-sjm'] },
-  { name: 'Renata Monteiro Vieira', unit_ids: ['unit-sjm'] },
-  { name: 'Risla de Oliveira Gomes', unit_ids: ['unit-sjm'] },
+  { name: 'Danielle de Souza Cortez Godfroy', unit_ids: ['unit-sjm'], crm: '52649830' },
+  { name: 'Fernanda Roessler Sebastiao', unit_ids: ['unit-sjm'], crm: '52.660.493' },
+  { name: 'Fernando Gomez Rodriguez', unit_ids: ['unit-sjm'], crm: '52926400' },
+  { name: 'Gabriela Fassini Vilas Boas Chagas', unit_ids: ['unit-sjm'], crm: '52.779.270' },
+  { name: 'Renata Monteiro Vieira', unit_ids: ['unit-sjm'], crm: '52.650.919' },
+  { name: 'Risla de Oliveira Gomes', unit_ids: ['unit-sjm'], crm: '52.650.943' },
   // Magé Exclusivos
-  { name: 'Laila Denise Oliveira de Andrade Kelm', unit_ids: ['unit-mage'] },
-  { name: 'Wilson Vial Filho', unit_ids: ['unit-mage'] },
-  { name: 'Ana Cristina Pinheiro Leão', unit_ids: ['unit-mage'] }
+  { name: 'Laila Denise Oliveira de Andrade Kelm', unit_ids: ['unit-mage'], crm: '52-01170783' },
+  { name: 'Wilson Vial Filho', unit_ids: ['unit-mage'], crm: '52.957.330' },
+  { name: 'Ana Cristina Pinheiro Leão', unit_ids: ['unit-mage'], crm: '521005340' },
+  { name: 'Lais Bogado Hage Chahine Olsen', unit_ids: ['unit-mage'], crm: '521142135' },
+  { name: 'Paloma Pereira Dutra de Almeida', unit_ids: ['unit-mage'], crm: '521164864' }
 ];
 
 // ==========================================
@@ -525,7 +527,7 @@ async function runPopulation() {
   const doctorRows = doctors.map((d, index) => ({
     id: `doc-${index + 1}-${d.name.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 20)}`,
     name: d.name,
-    crm: `CRM-${10000 + index}`,
+    crm: d.crm || `CRM-${10000 + index}`,
     state_crm: 'RJ',
     unit_ids: d.unit_ids,
     specialty: 'Oftalmologia Geral e Cirúrgica',

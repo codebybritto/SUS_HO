@@ -1459,7 +1459,7 @@ const DoctorModal: React.FC<{
 }> = ({ isOpen, doctor, units, onClose, onSave }) => {
   const [name, setName] = useState(doctor?.name || '');
   const [crm, setCrm] = useState(doctor?.crm || '');
-  const [stateCrm, setStateCrm] = useState(doctor?.stateCrm || 'SP');
+  const [stateCrm, setStateCrm] = useState(doctor?.stateCrm || 'RJ');
   const [specialty, setSpecialty] = useState(doctor?.specialty || 'Oftalmologia Geral');
   const [selectedUnits, setSelectedUnits] = useState<string[]>(
     doctor?.unitIds || units.map((u) => u.id)
