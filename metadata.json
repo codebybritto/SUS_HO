@@ -1,0 +1,8 @@
+{
+  "name": "SIS-REG Oftalmo - Sistema de Gestão e Evolução SUS",
+  "description": "Sistema integrado de regulação, controle, tentativas de contato e evolução de pacientes encaminhados pelo convênio SUS.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

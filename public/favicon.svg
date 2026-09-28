@@ -1,0 +1,42 @@
+<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="favUpperGrad" x1="6" y1="16" x2="58" y2="28" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1D4ED8" />
+      <stop offset="50%" stop-color="#0284C7" />
+      <stop offset="100%" stop-color="#06B6D4" />
+    </linearGradient>
+    <linearGradient id="favLowerGrad" x1="6" y1="44" x2="58" y2="34" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0284C7" />
+      <stop offset="50%" stop-color="#0D9488" />
+      <stop offset="100%" stop-color="#10B981" />
+    </linearGradient>
+    <radialGradient id="favIrisGrad" cx="32" cy="32" r="14" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0A192F" />
+      <stop offset="55%" stop-color="#0369A1" />
+      <stop offset="85%" stop-color="#0D9488" />
+      <stop offset="100%" stop-color="#14B8A6" />
+    </radialGradient>
+  </defs>
+
+  <!-- Background circle for icon contrast -->
+  <rect width="64" height="64" rx="16" fill="#0a192f" />
+
+  <!-- Upper Eye Eyelid Arc -->
+  <path d="M8 32C15 17 23 13 32 13C41 13 49 17 56 32" stroke="url(#favUpperGrad)" stroke-width="4" stroke-linecap="round" />
+  <path d="M12 28C17 19 24 16 32 16C40 16 47 19 52 28" stroke="#38BDF8" stroke-width="1.5" stroke-linecap="round" opacity="0.6" />
+
+  <!-- Lower Eye Eyelid Arc -->
+  <path d="M8 32C15 47 23 51 32 51C41 51 49 47 56 32" stroke="url(#favLowerGrad)" stroke-width="4" stroke-linecap="round" />
+  <path d="M12 36C17 45 24 48 32 48C40 48 47 45 52 36" stroke="#2DD4BF" stroke-width="1.5" stroke-linecap="round" opacity="0.6" />
+
+  <!-- Iris & Optical Core -->
+  <circle cx="32" cy="32" r="12" fill="url(#favIrisGrad)" stroke="#38BDF8" stroke-width="2" />
+  <circle cx="32" cy="32" r="6.5" fill="#050B14" />
+
+  <!-- Medical Cross / Focus Mark -->
+  <path d="M32 27.5V36.5M27.5 32H36.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" />
+
+  <!-- Light Reflection Glint -->
+  <circle cx="28.5" cy="28" r="2" fill="#FFFFFF" />
+  <circle cx="35" cy="35" r="1" fill="#38BDF8" />
+</svg>
