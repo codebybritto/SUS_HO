@@ -35,13 +35,19 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(() => storageService.getCurrentUser());
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    const user = storageService.getCurrentUser();
+    if (user && user.id === DEMO_USER.id) {
+      return null;
+    }
+    return user;
+  });
   const [allUnits, setAllUnits] = useState<Unit[]>(() => storageService.getUnits());
   const [activeUnitId, setActiveUnitIdState] = useState<string | 'ALL'>('ALL');
   const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(null);
   const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
     try {
-      return localStorage.getItem('micrologos_is_demo_mode_v5') === 'true';
+      return localStorage.getItem('micrologos_is_demo_mode_v6') === 'true';
     } catch {
       return false;
     }
@@ -50,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const enterDemoMode = () => {
     setIsDemoMode(true);
     try {
-      localStorage.setItem('micrologos_is_demo_mode_v5', 'true');
+      localStorage.setItem('micrologos_is_demo_mode_v6', 'true');
     } catch {}
     setCurrentUser(DEMO_USER);
     storageService.setCurrentUser(DEMO_USER);
@@ -60,7 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const exitDemoMode = () => {
     setIsDemoMode(false);
     try {
-      localStorage.setItem('micrologos_is_demo_mode_v5', 'false');
+      localStorage.setItem('micrologos_is_demo_mode_v6', 'false');
     } catch {}
     setCurrentUser(null);
     storageService.setCurrentUser(null);
@@ -118,7 +124,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (loginInput: string, pass?: string): Promise<boolean> => {
     setIsDemoMode(false);
     try {
-      localStorage.setItem('micrologos_is_demo_mode_v5', 'false');
+      localStorage.setItem('micrologos_is_demo_mode_v6', 'false');
     } catch {}
 
     const cleanLogin = (loginInput || '').trim().toLowerCase();
@@ -167,7 +173,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setIsDemoMode(false);
     try {
-      localStorage.setItem('micrologos_is_demo_mode_v5', 'false');
+      localStorage.setItem('micrologos_is_demo_mode_v6', 'false');
     } catch {}
     setCurrentUser(null);
     storageService.setCurrentUser(null);

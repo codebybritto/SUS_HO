@@ -15,7 +15,7 @@ import {
   Municipality,
   PatientProcedureItem,
 } from '../types';
-import { storageService, INITIAL_PATIENTS } from '../services/storage';
+import { storageService } from '../services/storage';
 import { supabaseService } from '../services/supabaseService';
 import { isSupabaseConfigured } from '../services/supabase';
 import { useAuth } from './AuthContext';
@@ -87,7 +87,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const { currentUser, isDemoMode } = useAuth();
 
   const [patients, setPatients] = useState<Patient[]>(() =>
-    isDemoMode ? INITIAL_PATIENTS : storageService.getPatients()
+    isDemoMode ? storageService.getDemoPatients() : storageService.getRealPatients()
   );
   const [units, setUnits] = useState<Unit[]>(() => storageService.getUnits());
   const [municipalities, setMunicipalities] = useState<Municipality[]>(() =>
@@ -96,7 +96,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [procedures, setProcedures] = useState<Procedure[]>(() => storageService.getProcedures());
   const [doctors, setDoctors] = useState<Doctor[]>(() => storageService.getDoctors());
   const [users, setUsers] = useState<User[]>(() => storageService.getUsers());
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => storageService.getAuditLogs());
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() =>
+    isDemoMode ? storageService.getDemoAuditLogs() : storageService.getRealAuditLogs()
+  );
   const [settings, setSettings] = useState<SystemSettings>(() => storageService.getSettings());
 
   const [supabaseSyncStatus, setSupabaseSyncStatus] = useState<SupabaseStatus>(() =>
@@ -114,16 +116,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const resetSimulationPatients = useCallback(() => {
     const demoPatients = storageService.getInitialDemoPatients();
-    setPatients((prev) => {
-      const realOnly = prev.filter((p) => !p.isSimulation);
-      const updated = [...realOnly, ...demoPatients];
-      storageService.savePatients(updated);
-      return updated;
-    });
-
-    if (isSupabaseConfigured()) {
-      supabaseService.upsertPatients(demoPatients).catch(console.warn);
-    }
+    setPatients(demoPatients);
+    storageService.saveDemoPatients(demoPatients);
   }, []);
 
   // Unified visible patients: all active records available without simulation filtering
@@ -251,21 +245,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       if (supaPatients !== null) {
         setPatients(supaPatients);
-        storageService.savePatients(supaPatients);
-        if (supaPatients.length > 0) {
-          hasSupabaseData = true;
-        }
+        storageService.saveRealPatients(supaPatients);
       }
-      if (supaLogs && supaLogs.length > 0) {
+      if (supaLogs !== null) {
         setAuditLogs(supaLogs);
+        storageService.saveRealAuditLogs(supaLogs);
       }
       if (supaSettings) {
         setSettings(supaSettings);
-      }
-
-      // If Supabase database was just created and is empty, automatically seed it!
-      if (!hasSupabaseData) {
-        await syncAllToSupabase();
       }
 
       setSupabaseSyncStatus('connected');
@@ -273,21 +260,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Falha ao carregar dados do Supabase. Operando em modo offline:', err);
       setSupabaseSyncStatus('error');
     }
-  }, [syncAllToSupabase]);
+  }, []);
 
-  // Initial load from Supabase or switch to Demo mode
+  // Mode transitions and user login synchronization with strict isolation
   useEffect(() => {
     if (isDemoMode) {
-      setPatients(INITIAL_PATIENTS);
-    } else if (isSupabaseConfigured()) {
-      reloadFromSupabase();
+      setPatients(storageService.getDemoPatients());
+      setAuditLogs(storageService.getDemoAuditLogs());
+    } else {
+      // In real mode, strictly load real data and immediately sync with Supabase
+      setPatients(storageService.getRealPatients());
+      setAuditLogs(storageService.getRealAuditLogs());
+      if (isSupabaseConfigured()) {
+        reloadFromSupabase();
+      }
     }
-  }, [isDemoMode, reloadFromSupabase]);
+  }, [isDemoMode, currentUser?.id, reloadFromSupabase]);
 
-  // Save changes to LocalStorage whenever state updates (offline cache) - ONLY in real mode
+  // Save changes to LocalStorage whenever state updates (offline cache) with strict mode separation
   useEffect(() => {
-    if (!isDemoMode) {
-      storageService.savePatients(patients);
+    if (isDemoMode) {
+      storageService.saveDemoPatients(patients);
+    } else {
+      storageService.saveRealPatients(patients);
     }
   }, [patients, isDemoMode]);
 
@@ -312,8 +307,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [users]);
 
   useEffect(() => {
-    storageService.saveAuditLogs(auditLogs);
-  }, [auditLogs]);
+    if (isDemoMode) {
+      storageService.saveDemoAuditLogs(auditLogs);
+    } else {
+      storageService.saveRealAuditLogs(auditLogs);
+    }
+  }, [auditLogs, isDemoMode]);
 
   useEffect(() => {
     storageService.saveSettings(settings);
@@ -329,7 +328,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setAuditLogs((prev) => [newLog, ...prev.slice(0, 1999)]);
 
-    if (isSupabaseConfigured()) {
+    if (!isDemoMode && isSupabaseConfigured()) {
       supabaseService.insertAuditLog(newLog).catch((err) => {
         console.warn('Erro ao registrar log no Supabase:', err);
       });

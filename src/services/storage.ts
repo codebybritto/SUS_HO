@@ -11,17 +11,19 @@ import {
 } from '../types';
 
 const STORAGE_KEYS = {
-  USERS: 'micrologos_users_rj_v5',
-  UNITS: 'micrologos_units_rj_v5',
-  MUNICIPALITIES: 'micrologos_municipalities_rj_v5',
-  PROCEDURES: 'micrologos_procedures_rj_v5',
-  DOCTORS: 'micrologos_doctors_rj_v5',
-  PATIENTS: 'micrologos_patients_rj_v5',
-  AUDIT_LOGS: 'micrologos_audit_logs_rj_v5',
-  SETTINGS: 'micrologos_settings_rj_v5',
-  CURRENT_USER: 'micrologos_current_user_rj_v5',
-  ACTIVE_UNIT: 'micrologos_active_unit_rj_v5',
-  CUSTOM_LOGO: 'micrologos_custom_logo_v5',
+  USERS: 'micrologos_users_rj_v6',
+  UNITS: 'micrologos_units_rj_v6',
+  MUNICIPALITIES: 'micrologos_municipalities_rj_v6',
+  PROCEDURES: 'micrologos_procedures_rj_v6',
+  DOCTORS: 'micrologos_doctors_rj_v6',
+  REAL_PATIENTS: 'micrologos_real_patients_v6',
+  DEMO_PATIENTS: 'micrologos_demo_patients_v6',
+  REAL_AUDIT_LOGS: 'micrologos_real_audit_logs_v6',
+  DEMO_AUDIT_LOGS: 'micrologos_demo_audit_logs_v6',
+  SETTINGS: 'micrologos_settings_rj_v6',
+  CURRENT_USER: 'micrologos_current_user_rj_v6',
+  ACTIVE_UNIT: 'micrologos_active_unit_rj_v6',
+  CUSTOM_LOGO: 'micrologos_custom_logo_v6',
 };
 
 export const DEFAULT_SETTINGS: SystemSettings = {
@@ -980,9 +982,9 @@ export const storageService = {
     localStorage.setItem(STORAGE_KEYS.DOCTORS, JSON.stringify(doctors));
   },
 
-  getPatients(): Patient[] {
+  getRealPatients(): Patient[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.PATIENTS);
+      const data = localStorage.getItem(STORAGE_KEYS.REAL_PATIENTS);
       if (data) {
         const list = JSON.parse(data) as Patient[];
         return list.map((p) => ({
@@ -996,25 +998,78 @@ export const storageService = {
     }
   },
 
+  saveRealPatients(patients: Patient[]): void {
+    try {
+      localStorage.setItem(STORAGE_KEYS.REAL_PATIENTS, JSON.stringify(patients));
+    } catch {}
+  },
+
+  getDemoPatients(): Patient[] {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.DEMO_PATIENTS);
+      if (data) {
+        return JSON.parse(data) as Patient[];
+      }
+      return INITIAL_PATIENTS.map((p) => ({ ...p, isSimulation: true }));
+    } catch {
+      return INITIAL_PATIENTS.map((p) => ({ ...p, isSimulation: true }));
+    }
+  },
+
+  saveDemoPatients(patients: Patient[]): void {
+    try {
+      localStorage.setItem(STORAGE_KEYS.DEMO_PATIENTS, JSON.stringify(patients));
+    } catch {}
+  },
+
+  getPatients(): Patient[] {
+    return this.getRealPatients();
+  },
+
   getInitialDemoPatients(): Patient[] {
     return INITIAL_PATIENTS.map((p) => ({ ...p, isSimulation: true }));
   },
 
   savePatients(patients: Patient[]): void {
-    localStorage.setItem(STORAGE_KEYS.PATIENTS, JSON.stringify(patients));
+    this.saveRealPatients(patients);
   },
 
-  getAuditLogs(): AuditLog[] {
+  getRealAuditLogs(): AuditLog[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.AUDIT_LOGS);
+      const data = localStorage.getItem(STORAGE_KEYS.REAL_AUDIT_LOGS);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  saveRealAuditLogs(logs: AuditLog[]): void {
+    try {
+      localStorage.setItem(STORAGE_KEYS.REAL_AUDIT_LOGS, JSON.stringify(logs));
+    } catch {}
+  },
+
+  getDemoAuditLogs(): AuditLog[] {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.DEMO_AUDIT_LOGS);
       return data ? JSON.parse(data) : INITIAL_AUDIT_LOGS;
     } catch {
       return INITIAL_AUDIT_LOGS;
     }
   },
 
+  saveDemoAuditLogs(logs: AuditLog[]): void {
+    try {
+      localStorage.setItem(STORAGE_KEYS.DEMO_AUDIT_LOGS, JSON.stringify(logs));
+    } catch {}
+  },
+
+  getAuditLogs(): AuditLog[] {
+    return this.getRealAuditLogs();
+  },
+
   saveAuditLogs(logs: AuditLog[]): void {
-    localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify(logs));
+    this.saveRealAuditLogs(logs);
   },
 
   addAuditLog(log: Omit<AuditLog, 'id' | 'timestamp'>): void {
