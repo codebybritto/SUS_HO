@@ -1044,10 +1044,21 @@ export const storageService = {
   getPatients(): Patient[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.PATIENTS);
-      return data ? JSON.parse(data) : INITIAL_PATIENTS;
+      if (data) {
+        const list = JSON.parse(data) as Patient[];
+        return list.map((p) => ({
+          ...p,
+          isSimulation: p.isSimulation !== undefined ? p.isSimulation : true,
+        }));
+      }
+      return INITIAL_PATIENTS.map((p) => ({ ...p, isSimulation: true }));
     } catch {
-      return INITIAL_PATIENTS;
+      return INITIAL_PATIENTS.map((p) => ({ ...p, isSimulation: true }));
     }
+  },
+
+  getInitialDemoPatients(): Patient[] {
+    return INITIAL_PATIENTS.map((p) => ({ ...p, isSimulation: true }));
   },
 
   savePatients(patients: Patient[]): void {

@@ -36,6 +36,11 @@ interface AppContextType {
   isSupabaseActive: boolean;
   syncAllToSupabase: () => Promise<{ success: boolean; message: string }>;
   reloadFromSupabase: () => Promise<void>;
+  // Database Mode (Base Real vs Simulação)
+  databaseMode: 'real' | 'simulation';
+  setDatabaseMode: (mode: 'real' | 'simulation') => void;
+  resetSimulationPatients: () => void;
+  allPatientsCount: { real: number; simulation: number };
   // Patient Actions
   addPatient: (data: Partial<Patient> & { procedures?: PatientProcedureItem[] }) => Patient;
   updatePatient: (id: string, data: Partial<Patient> & { procedures?: PatientProcedureItem[] }) => void;
@@ -95,6 +100,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [supabaseSyncStatus, setSupabaseSyncStatus] = useState<SupabaseStatus>(() =>
     isSupabaseConfigured() ? 'syncing' : 'unconfigured'
   );
+
+  const [databaseMode, setDatabaseModeState] = useState<'real' | 'simulation'>(() => {
+    try {
+      const saved = localStorage.getItem('micrologos_database_mode_v4');
+      return saved === 'real' || saved === 'simulation' ? saved : 'simulation';
+    } catch {
+      return 'simulation';
+    }
+  });
+
+  const setDatabaseMode = (mode: 'real' | 'simulation') => {
+    setDatabaseModeState(mode);
+    try {
+      localStorage.setItem('micrologos_database_mode_v4', mode);
+    } catch {}
+  };
+
+  const resetSimulationPatients = useCallback(() => {
+    const demoPatients = storageService.getInitialDemoPatients();
+    setPatients((prev) => {
+      const realOnly = prev.filter((p) => !p.isSimulation);
+      const updated = [...realOnly, ...demoPatients];
+      storageService.savePatients(updated);
+      return updated;
+    });
+
+    if (isSupabaseConfigured()) {
+      supabaseService.upsertPatients(demoPatients).catch(console.warn);
+    }
+  }, []);
+
+  // Visible patients based on active database mode (Real vs Simulação)
+  const visiblePatients = React.useMemo(() => {
+    if (databaseMode === 'real') {
+      return patients.filter((p) => !p.isSimulation);
+    } else {
+      return patients.filter((p) => !!p.isSimulation);
+    }
+  }, [patients, databaseMode]);
+
+  const allPatientsCount = React.useMemo(() => {
+    const real = patients.filter((p) => !p.isSimulation && !p.isDeleted).length;
+    const simulation = patients.filter((p) => !!p.isSimulation && !p.isDeleted).length;
+    return { real, simulation };
+  }, [patients]);
 
   // Active current user info for audit & timeline
   const currentUserId = currentUser?.id || 'system';
@@ -338,6 +388,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       requestingDoctorName: doc?.name || data.requestingDoctorName || '',
       eyeSide: primaryEye,
       isUrgent: !!data.isUrgent,
+      isSimulation: databaseMode === 'simulation',
       city: data.city || '',
       hasFollowup: !!data.hasFollowup,
       followupDate: data.followupDate,
@@ -1313,7 +1364,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider
       value={{
-        patients,
+        patients: visiblePatients,
+        databaseMode,
+        setDatabaseMode,
+        resetSimulationPatients,
+        allPatientsCount,
         units,
         municipalities,
         procedures,

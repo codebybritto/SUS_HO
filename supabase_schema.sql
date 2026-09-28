@@ -61,7 +61,8 @@ CREATE TABLE IF NOT EXISTS public.system_users (
     permissions JSONB DEFAULT '{}'::jsonb,
     email TEXT,
     created_at TEXT NOT NULL DEFAULT NOW()::text,
-    last_login_at TEXT
+    last_login_at TEXT,
+    must_change_password BOOLEAN NOT NULL DEFAULT false
 );
 
 -- 6. TABELA DE PACIENTES
@@ -77,6 +78,7 @@ CREATE TABLE IF NOT EXISTS public.patients (
     requesting_doctor_id TEXT,
     requesting_doctor_name TEXT,
     is_urgent BOOLEAN NOT NULL DEFAULT false,
+    is_simulation BOOLEAN NOT NULL DEFAULT false,
     city TEXT NOT NULL,
     has_followup BOOLEAN NOT NULL DEFAULT false,
     followup_date TEXT,
@@ -133,6 +135,7 @@ CREATE INDEX IF NOT EXISTS idx_patients_unit_id ON public.patients(unit_id);
 CREATE INDEX IF NOT EXISTS idx_patients_status ON public.patients(current_status);
 CREATE INDEX IF NOT EXISTS idx_patients_city ON public.patients(city);
 CREATE INDEX IF NOT EXISTS idx_patients_is_deleted ON public.patients(is_deleted);
+CREATE INDEX IF NOT EXISTS idx_patients_is_simulation ON public.patients(is_simulation);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON public.audit_logs(timestamp DESC);
 
 -- =========================================================================

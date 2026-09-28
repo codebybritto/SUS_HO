@@ -16,6 +16,9 @@ import {
   CheckCircle2,
   MapPin,
   Building2,
+  Key,
+  Lock,
+  RefreshCw,
 } from 'lucide-react';
 import {
   User,
@@ -58,12 +61,14 @@ export const AdminView: React.FC = () => {
     updateSettings,
   } = useApp();
 
-  const { currentUser, hasPermission } = useAuth();
+  const { currentUser, hasPermission, adminResetPassword } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTab>('users');
 
   // Modal states
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [userForPasswordReset, setUserForPasswordReset] = useState<User | null>(null);
+  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
 
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
   const [isUnitModalOpen, setIsUnitModalOpen] = useState(false);
@@ -240,7 +245,14 @@ export const AdminView: React.FC = () => {
                               )}
                             </td>
                             <td className="py-2.5 px-3 font-mono font-medium text-slate-700">
-                              {u.login}
+                              <div className="flex items-center gap-1.5">
+                                <span>{u.login}</span>
+                                {u.mustChangePassword && (
+                                  <span className="text-[9px] bg-amber-100 text-amber-800 border border-amber-300 px-1.5 py-0.2 rounded font-sans font-bold" title="Usuário precisará cadastrar nova senha no próximo acesso">
+                                    Troca Pendente
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="py-2.5 px-3">
                               <span
@@ -280,6 +292,17 @@ export const AdminView: React.FC = () => {
                             </td>
                             <td className="py-2.5 px-3 text-right">
                               <div className="flex items-center justify-end gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setUserForPasswordReset(u);
+                                    setIsResetPasswordModalOpen(true);
+                                  }}
+                                  className="p-1 text-slate-500 hover:text-amber-600 hover:bg-slate-100 rounded"
+                                  title="Resetar / Redefinir Senha do Usuário"
+                                >
+                                  <Key className="w-3.5 h-3.5" />
+                                </button>
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -813,6 +836,26 @@ export const AdminView: React.FC = () => {
           }}
         />
       )}
+
+      {/* RESET USER PASSWORD MODAL */}
+      {isResetPasswordModalOpen && userForPasswordReset && (
+        <ResetUserPasswordModal
+          isOpen={isResetPasswordModalOpen}
+          user={userForPasswordReset}
+          onClose={() => {
+            setIsResetPasswordModalOpen(false);
+            setUserForPasswordReset(null);
+          }}
+          onReset={async (userId, newPass, forceChange) => {
+            const success = await adminResetPassword(userId, newPass, forceChange);
+            if (success) {
+              setIsResetPasswordModalOpen(false);
+              setUserForPasswordReset(null);
+            }
+            return success;
+          }}
+        />
+      )}
     </div>
   );
 };
@@ -831,6 +874,7 @@ const UserModal: React.FC<{
   const [role, setRole] = useState<UserRole>(user?.role || 'attendant');
   const [active, setActive] = useState(user?.active ?? true);
   const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>(user?.unitIds || [units[0]?.id || '']);
+  const [mustChangePassword, setMustChangePassword] = useState(user?.mustChangePassword ?? false);
 
   const [permissions, setPermissions] = useState<UserPermissions>(
     user?.permissions || {
@@ -882,6 +926,7 @@ const UserModal: React.FC<{
       password,
       role,
       active,
+      mustChangePassword,
       unitIds: selectedUnitIds,
       permissions:
         role === 'admin'
@@ -984,16 +1029,26 @@ const UserModal: React.FC<{
             </div>
           </div>
 
-          {/* Status Ativo */}
-          <div>
-            <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-800">
+          {/* Status Ativo e Troca Obrigatória */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-800 p-2 bg-slate-50 border border-slate-200 rounded-lg">
               <input
                 type="checkbox"
                 checked={active}
                 onChange={(e) => setActive(e.target.checked)}
                 className="rounded text-cyan-600"
               />
-              <span>Usuário ativo (permite autenticação e operação)</span>
+              <span className="text-xs">Usuário ativo (permite login)</span>
+            </label>
+
+            <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-800 p-2 bg-amber-50/70 border border-amber-200 rounded-lg">
+              <input
+                type="checkbox"
+                checked={mustChangePassword}
+                onChange={(e) => setMustChangePassword(e.target.checked)}
+                className="rounded text-amber-600"
+              />
+              <span className="text-xs text-amber-950 font-semibold">Exigir troca de senha no próximo acesso</span>
             </label>
           </div>
 
@@ -1490,3 +1545,148 @@ const DoctorModal: React.FC<{
     </div>
   );
 };
+
+// RESET USER PASSWORD MODAL COMPONENT
+const ResetUserPasswordModal: React.FC<{
+  isOpen: boolean;
+  user: User;
+  onClose: () => void;
+  onReset: (userId: string, newPassword: string, forceChange: boolean) => Promise<boolean>;
+}> = ({ isOpen, user, onClose, onReset }) => {
+  const [newPassword, setNewPassword] = useState('Saude@123');
+  const [forceChange, setForceChange] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  if (!isOpen) return null;
+
+  const generateRandomPassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#';
+    let pass = '';
+    for (let i = 0; i < 8; i++) {
+      pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setNewPassword(pass);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPassword.trim() || newPassword.length < 4) {
+      setFeedback({ type: 'error', text: 'A senha deve conter no mínimo 4 caracteres.' });
+      return;
+    }
+
+    setIsSubmitting(true);
+    setFeedback(null);
+    const ok = await onReset(user.id, newPassword.trim(), forceChange);
+    setIsSubmitting(false);
+
+    if (ok) {
+      setFeedback({ type: 'success', text: `Senha redefinida com sucesso para o usuário ${user.name}!` });
+      setTimeout(() => {
+        onClose();
+      }, 1500);
+    } else {
+      setFeedback({ type: 'error', text: 'Falha ao redefinir a senha.' });
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 relative">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700">
+            <Key className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-slate-900">Redefinir Senha do Usuário</h3>
+            <p className="text-xs text-slate-500">
+              Operador: <strong>{user.name}</strong> (Login: <code className="font-mono text-slate-700">{user.login}</code>)
+            </p>
+          </div>
+        </div>
+
+        {feedback && (
+          <div
+            className={`mb-4 p-2.5 rounded-lg text-xs font-medium flex items-center gap-2 ${
+              feedback.type === 'success'
+                ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+                : 'bg-rose-50 border border-rose-200 text-rose-700'
+            }`}
+          >
+            {feedback.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
+            )}
+            <span>{feedback.text}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="font-semibold text-slate-700">Nova Senha Provisória</label>
+              <button
+                type="button"
+                onClick={generateRandomPassword}
+                className="text-[11px] text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1 cursor-pointer"
+              >
+                <RefreshCw className="w-3 h-3" />
+                <span>Gerar Senha Aleatória</span>
+              </button>
+            </div>
+            <input
+              type="text"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              required
+            />
+          </div>
+
+          <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl space-y-1">
+            <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-800">
+              <input
+                type="checkbox"
+                checked={forceChange}
+                onChange={(e) => setForceChange(e.target.checked)}
+                className="rounded text-amber-600 focus:ring-amber-500"
+              />
+              <span className="font-bold text-slate-900">Exigir troca no próximo login</span>
+            </label>
+            <p className="text-[10px] text-slate-600 pl-5">
+              Ao acessar com esta senha provisória, o operador será obrigado a cadastrar sua própria senha pessoal antes de usar o sistema.
+            </p>
+          </div>
+
+          <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-xs disabled:opacity-50 cursor-pointer"
+            >
+              {isSubmitting ? 'Salvando...' : 'Confirmar e Salvar Nova Senha'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+

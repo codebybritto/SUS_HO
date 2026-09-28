@@ -47,6 +47,7 @@ export interface User {
   email?: string;
   createdAt: string;
   lastLoginAt?: string;
+  mustChangePassword?: boolean;
 }
 
 export interface Municipality {
@@ -193,6 +194,7 @@ export interface Patient {
   requestingDoctorId: string;
   requestingDoctorName: string;
   isUrgent: boolean;
+  isSimulation?: boolean;
   city: string;
   hasFollowup: boolean;
   followupDate?: string;

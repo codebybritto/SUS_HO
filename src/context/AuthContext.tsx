@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserPermissions, Unit } from '../types';
 import { storageService } from '../services/storage';
+import { supabaseService } from '../services/supabaseService';
+import { isSupabaseConfigured } from '../services/supabase';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -13,6 +15,13 @@ interface AuthContextType {
   logout: () => void;
   hasPermission: (permission: keyof UserPermissions) => boolean;
   canAccessUnit: (unitId: string) => boolean;
+  changeOwnPassword: (newPassword: string) => Promise<boolean>;
+  adminResetPassword: (
+    userId: string,
+    newPassword: string,
+    forceChangeOnNextLogin: boolean
+  ) => Promise<boolean>;
+  clearMustChangePasswordFlag: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -95,6 +104,72 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return currentUser.unitIds.includes(unitId);
   };
 
+  const changeOwnPassword = async (newPassword: string): Promise<boolean> => {
+    if (!currentUser) return false;
+    const users = storageService.getUsers();
+    const updatedUsers = users.map((u) => {
+      if (u.id === currentUser.id) {
+        return { ...u, password: newPassword, mustChangePassword: false };
+      }
+      return u;
+    });
+
+    storageService.saveUsers(updatedUsers);
+    const updatedUser = { ...currentUser, password: newPassword, mustChangePassword: false };
+    setCurrentUser(updatedUser);
+    storageService.setCurrentUser(updatedUser);
+
+    if (isSupabaseConfigured()) {
+      await supabaseService.upsertUser(updatedUser).catch(console.warn);
+    }
+
+    return true;
+  };
+
+  const adminResetPassword = async (
+    userId: string,
+    newPassword: string,
+    forceChangeOnNextLogin: boolean
+  ): Promise<boolean> => {
+    const users = storageService.getUsers();
+    let targetUser: User | null = null;
+
+    const updatedUsers = users.map((u) => {
+      if (u.id === userId) {
+        targetUser = {
+          ...u,
+          password: newPassword,
+          mustChangePassword: forceChangeOnNextLogin,
+        };
+        return targetUser;
+      }
+      return u;
+    });
+
+    if (!targetUser) return false;
+
+    storageService.saveUsers(updatedUsers);
+
+    if (currentUser && currentUser.id === userId) {
+      setCurrentUser(targetUser);
+      storageService.setCurrentUser(targetUser);
+    }
+
+    if (isSupabaseConfigured()) {
+      await supabaseService.upsertUser(targetUser).catch(console.warn);
+    }
+
+    return true;
+  };
+
+  const clearMustChangePasswordFlag = () => {
+    if (currentUser) {
+      const updated = { ...currentUser, mustChangePassword: false };
+      setCurrentUser(updated);
+      storageService.setCurrentUser(updated);
+    }
+  };
+
   const activeUnit = React.useMemo(() => {
     if (activeUnitId === 'ALL') return null;
     return allUnits.find((u) => u.id === activeUnitId) || null;
@@ -113,6 +188,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         hasPermission,
         canAccessUnit,
+        changeOwnPassword,
+        adminResetPassword,
+        clearMustChangePasswordFlag,
       }}
     >
       {children}

@@ -20,7 +20,7 @@ import { RecordContactModal } from './components/patients/RecordContactModal';
 import { RecordAbsenceModal } from './components/patients/RecordAbsenceModal';
 import { Patient } from './types';
 import { AppLogo } from './components/common/AppLogo';
-import { Lock, User, ShieldCheck, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Lock, User, ShieldCheck, ArrowRight, CheckCircle2, AlertCircle, KeyRound, HelpCircle, X, LogOut } from 'lucide-react';
 
 const MainAppContent: React.FC = () => {
   const { currentUser, login } = useAuth();
@@ -47,6 +47,7 @@ const MainAppContent: React.FC = () => {
   const [loginInput, setLoginInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] = useState(false);
 
   // Find active selected patient object dynamically from state
   const selectedPatient = useMemo(() => {
@@ -120,9 +121,19 @@ const MainAppContent: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Senha
-                </label>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Senha
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsForgotPasswordModalOpen(true)}
+                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 transition-colors"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5" />
+                    <span>Esqueci minha senha</span>
+                  </button>
+                </div>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
@@ -137,7 +148,7 @@ const MainAppContent: React.FC = () => {
 
               <button
                 type="submit"
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-colors flex items-center justify-center gap-2"
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Acessar o Sistema</span>
                 <ArrowRight className="w-4 h-4" />
@@ -181,6 +192,65 @@ const MainAppContent: React.FC = () => {
         <div className="mt-6 text-center text-xs text-slate-500 z-10">
           Sistema de Gestão, Controle e Evolução de Pacientes
         </div>
+
+        {/* Forgot Password Modal */}
+        {isForgotPasswordModalOpen && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full p-6 relative">
+              <button
+                type="button"
+                onClick={() => setIsForgotPasswordModalOpen(false)}
+                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-700 shadow-xs">
+                  <KeyRound className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Recuperação de Acesso</h3>
+                  <p className="text-xs text-slate-500">Política de segurança e redefinição</p>
+                </div>
+              </div>
+
+              <div className="space-y-3.5 text-xs text-slate-600">
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 leading-relaxed">
+                  <p className="font-semibold text-slate-800 mb-1">Esqueceu sua senha de operador?</p>
+                  Por conformidade com as normas de segurança de dados de saúde, a redefinição de senhas é realizada diretamente pelo <strong>Administrador do Sistema</strong>.
+                </div>
+
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 space-y-1.5">
+                  <p className="font-bold flex items-center gap-1.5 text-blue-800">
+                    <ShieldCheck className="w-4 h-4 text-blue-600" />
+                    Como funciona o procedimento:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-[11px] text-blue-800">
+                    <li>Contate o Administrador para solicitar uma <strong>redefinição de senha</strong>.</li>
+                    <li>O Administrador definirá uma senha temporária com a opção <strong>"Troca obrigatória no próximo login"</strong> ativada.</li>
+                    <li>Ao efetuar login com essa credencial provisória, o sistema exigirá que você cadastre sua nova senha pessoal antes de acessar os prontuários.</li>
+                  </ul>
+                </div>
+
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-[11px]">
+                  <span className="font-bold block mb-1">Ambiente de Demonstração / Testes:</span>
+                  Para contas de teste, a senha padrão é <code className="font-mono font-bold bg-white px-1.5 py-0.5 rounded border border-amber-300">123</code> para os operadores e <code className="font-mono font-bold bg-white px-1.5 py-0.5 rounded border border-amber-300">admin</code> para a conta Administrador.
+                </div>
+              </div>
+
+              <div className="mt-5 pt-3 border-t border-slate-100 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsForgotPasswordModalOpen(false)}
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+                >
+                  Entendi, voltar ao login
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -337,6 +407,137 @@ const MainAppContent: React.FC = () => {
           }}
         />
       )}
+
+      {/* 6. Mandatory Forced Password Change Modal */}
+      {currentUser?.mustChangePassword && <ForcedPasswordChangeModal />}
+    </div>
+  );
+};
+
+const ForcedPasswordChangeModal: React.FC = () => {
+  const { currentUser, changeOwnPassword, logout } = useAuth();
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (newPassword.length < 4) {
+      setError('A nova senha deve possuir pelo menos 4 caracteres.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('A confirmação não coincide com a nova senha digitada.');
+      return;
+    }
+
+    if (newPassword === '123' || (currentUser && newPassword === currentUser.login)) {
+      setError('Por segurança, não utilize a senha padrão "123" nem o seu login.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const ok = await changeOwnPassword(newPassword);
+      if (!ok) {
+        setError('Ocorreu um erro ao atualizar a senha. Tente novamente.');
+      }
+    } catch {
+      setError('Erro ao salvar. Verifique a conexão com o banco de dados.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full p-6 sm:p-8">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 shadow-xs">
+            <KeyRound className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Troca Obrigatória de Senha</h2>
+            <p className="text-xs text-slate-500">
+              Operador: <span className="font-semibold text-slate-700">{currentUser?.name}</span> ({currentUser?.login})
+            </p>
+          </div>
+        </div>
+
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs mb-5 flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+          <span>
+            O administrador redefiniu sua credencial ou exigiu atualização cadastral. Para prosseguir e acessar os prontuários, cadastre uma nova senha pessoal.
+          </span>
+        </div>
+
+        {error && (
+          <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              Nova Senha
+            </label>
+            <div className="relative">
+              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Mínimo 4 caracteres"
+                className="w-full border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 font-mono"
+                required
+                autoFocus
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              Confirmar Nova Senha
+            </label>
+            <div className="relative">
+              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Repita a nova senha"
+                className="w-full border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 font-mono"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="pt-3 flex flex-col sm:flex-row items-center gap-2">
+            <button
+              type="button"
+              onClick={logout}
+              className="w-full sm:w-auto px-4 py-2.5 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sair da Conta</span>
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full sm:flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-sm font-semibold shadow-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>{loading ? 'Salvando...' : 'Cadastrar Senha e Acessar'}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

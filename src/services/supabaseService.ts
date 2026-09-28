@@ -23,6 +23,7 @@ export const mapPatientFromDb = (row: any): Patient => ({
   requestingDoctorId: row.requesting_doctor_id || '',
   requestingDoctorName: row.requesting_doctor_name || '',
   isUrgent: Boolean(row.is_urgent),
+  isSimulation: Boolean(row.is_simulation),
   city: row.city || '',
   hasFollowup: Boolean(row.has_followup),
   followupDate: row.followup_date || undefined,
@@ -60,6 +61,7 @@ export const mapPatientToDb = (p: Patient): any => ({
   requesting_doctor_id: p.requestingDoctorId,
   requesting_doctor_name: p.requestingDoctorName,
   is_urgent: p.isUrgent,
+  is_simulation: Boolean(p.isSimulation),
   city: p.city,
   has_followup: p.hasFollowup,
   followup_date: p.followupDate || null,
@@ -372,6 +374,7 @@ export const supabaseService = {
       email: r.email,
       createdAt: r.created_at,
       lastLoginAt: r.last_login_at,
+      mustChangePassword: Boolean(r.must_change_password),
     }));
   },
 
@@ -389,6 +392,7 @@ export const supabaseService = {
       email: u.email,
       created_at: u.createdAt,
       last_login_at: u.lastLoginAt || null,
+      must_change_password: Boolean(u.mustChangePassword),
     });
     return !error;
   },
@@ -407,6 +411,7 @@ export const supabaseService = {
       email: u.email,
       created_at: u.createdAt,
       last_login_at: u.lastLoginAt || null,
+      must_change_password: Boolean(u.mustChangePassword),
     }));
     const { error } = await supabase.from('system_users').upsert(rows, { onConflict: 'id' });
     return !error;
