@@ -1,56 +1,14 @@
 -- =========================================================================
--- ESQUEMA COMPLETO DE SEGURANÇA ESTRUTURAL E RLS DO SUPABASE (POSTGRESQL)
--- SISTEMA DE GESTÃO E CONTROLE DE PACIENTES - REGULAÇÃO AMBULATORIAL RJ
+-- MIGRAÇÃO DE SEGURANÇA ESTRUTURAL E RLS - SUPABASE SQL EDITOR
+-- Execute este script no SQL Editor do painel Supabase para ativar:
+-- 1. Profiles e vínculo com auth.users
+-- 2. Remoção de senha de system_users
+-- 3. Fim de USING(true) e ativação de RLS estrito (usuário, perfil, unidade)
+-- 4. Bloqueio de DELETE/UPDATE indevidos
+-- 5. Trigger de auditoria server-side com identificação por JWT (auth.uid())
 -- =========================================================================
 
--- 1. TABELA DE MUNICÍPIOS (RJ)
-CREATE TABLE IF NOT EXISTS public.municipalities (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    state TEXT NOT NULL DEFAULT 'RJ',
-    active BOOLEAN NOT NULL DEFAULT true
-);
-
--- 2. TABELA DE UNIDADES DE ATENDIMENTO
-CREATE TABLE IF NOT EXISTS public.units (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    code TEXT NOT NULL,
-    cnes TEXT,
-    city TEXT NOT NULL,
-    state TEXT NOT NULL DEFAULT 'RJ',
-    active BOOLEAN NOT NULL DEFAULT true,
-    phone TEXT,
-    address TEXT,
-    manager_name TEXT,
-    municipalities JSONB DEFAULT '[]'::jsonb
-);
-
--- 3. TABELA DE PROCEDIMENTOS
-CREATE TABLE IF NOT EXISTS public.procedures (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    code_sigtap TEXT,
-    unit_ids JSONB DEFAULT '[]'::jsonb,
-    active BOOLEAN NOT NULL DEFAULT true,
-    description TEXT,
-    requires_eye_side BOOLEAN DEFAULT true
-);
-
--- 4. TABELA DE MÉDICOS
-CREATE TABLE IF NOT EXISTS public.doctors (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    crm TEXT NOT NULL,
-    state_crm TEXT NOT NULL DEFAULT 'RJ',
-    unit_ids JSONB DEFAULT '[]'::jsonb,
-    specialty TEXT,
-    active BOOLEAN NOT NULL DEFAULT true,
-    phone TEXT
-);
-
--- 5. TABELA DE PROFILES (VINCULADA DIRETAMENTE AO SUPABASE AUTH)
--- Substitui armazenamento de senhas próprias. Senhas ficam protegidas em auth.users (bcrypt).
+-- 1. TABELA DE PROFILES (VINCULADA DIRETAMENTE AO SUPABASE AUTH)
 CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
@@ -64,104 +22,17 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 5.1 COMPATIBILIDADE SYSTEM_USERS (SEM SENHA)
-CREATE TABLE IF NOT EXISTS public.system_users (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    login TEXT NOT NULL UNIQUE,
-    role TEXT NOT NULL DEFAULT 'attendant',
-    active BOOLEAN NOT NULL DEFAULT true,
-    unit_ids JSONB DEFAULT '[]'::jsonb,
-    permissions JSONB DEFAULT '{}'::jsonb,
-    email TEXT,
-    created_at TEXT NOT NULL DEFAULT NOW()::text,
-    last_login_at TEXT,
-    must_change_password BOOLEAN NOT NULL DEFAULT false
-);
--- Remove password column se ainda existir
+-- 2. REMOVER SENHA DE SYSTEM_USERS
 ALTER TABLE public.system_users DROP COLUMN IF EXISTS password;
 
--- 6. TABELA DE PACIENTES
-CREATE TABLE IF NOT EXISTS public.patients (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    birth_date TEXT NOT NULL,
-    procedures JSONB DEFAULT '[]'::jsonb,
-    requested_procedure_id TEXT,
-    requested_procedure_name TEXT,
-    eye_side TEXT DEFAULT 'AO',
-    requested_date TEXT NOT NULL,
-    requesting_doctor_id TEXT,
-    requesting_doctor_name TEXT,
-    is_urgent BOOLEAN NOT NULL DEFAULT false,
-    is_simulation BOOLEAN NOT NULL DEFAULT false,
-    city TEXT NOT NULL,
-    has_followup BOOLEAN NOT NULL DEFAULT false,
-    followup_date TEXT,
-    notes TEXT,
-    unit_id TEXT NOT NULL,
-    unit_name TEXT,
-    current_status TEXT NOT NULL DEFAULT 'Aguardando Contato',
-    previous_status TEXT,
-    total_absences INTEGER NOT NULL DEFAULT 0,
-    absences JSONB DEFAULT '[]'::jsonb,
-    contact_attempts JSONB DEFAULT '[]'::jsonb,
-    evolutions JSONB DEFAULT '[]'::jsonb,
-    timeline JSONB DEFAULT '[]'::jsonb,
-    is_deleted BOOLEAN NOT NULL DEFAULT false,
-    deleted_at TEXT,
-    deleted_by TEXT,
-    deletion_reason TEXT,
-    created_at TEXT NOT NULL DEFAULT NOW()::text,
-    created_by_user_id TEXT,
-    created_by_user_name TEXT,
-    updated_at TEXT NOT NULL DEFAULT NOW()::text,
-    updated_by_user_id TEXT,
-    updated_by_user_name TEXT
-);
-
--- 7. TABELA DE LOGS DE AUDITORIA (SERVER-SIDE & CLIENT-SIDE)
-CREATE TABLE IF NOT EXISTS public.audit_logs (
-    id TEXT PRIMARY KEY,
-    timestamp TEXT NOT NULL DEFAULT NOW()::text,
-    user_id TEXT NOT NULL,
-    user_name TEXT NOT NULL,
-    action TEXT NOT NULL,
-    entity_type TEXT NOT NULL,
-    entity_id TEXT NOT NULL,
-    entity_label TEXT,
-    unit_id TEXT,
-    unit_name TEXT,
-    previous_values JSONB,
-    new_values JSONB,
-    description TEXT NOT NULL,
-    is_automatic BOOLEAN NOT NULL DEFAULT false
-);
-
--- 8. TABELA DE CONFIGURAÇÕES GERAIS
-CREATE TABLE IF NOT EXISTS public.system_settings (
-    id TEXT PRIMARY KEY,
-    settings JSONB NOT NULL
-);
-
--- =========================================================================
--- ÍNDICES PARA ALTA PERFORMANCE
--- =========================================================================
+-- 3. ÍNDICES DE PERFORMANCE E SEGURANÇA
 CREATE INDEX IF NOT EXISTS idx_profiles_login ON public.profiles(login);
 CREATE INDEX IF NOT EXISTS idx_profiles_role ON public.profiles(role);
 CREATE INDEX IF NOT EXISTS idx_patients_unit_id ON public.patients(unit_id);
 CREATE INDEX IF NOT EXISTS idx_patients_status ON public.patients(current_status);
-CREATE INDEX IF NOT EXISTS idx_patients_city ON public.patients(city);
-CREATE INDEX IF NOT EXISTS idx_patients_is_deleted ON public.patients(is_deleted);
-CREATE INDEX IF NOT EXISTS idx_patients_is_simulation ON public.patients(is_simulation);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON public.audit_logs(timestamp DESC);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_unit_id ON public.audit_logs(unit_id);
 
--- =========================================================================
--- FUNÇÕES DE AUTORIZAÇÃO E SEGURANÇA (SECURITY DEFINER)
--- =========================================================================
-
--- Retorna true se o usuário autenticado for Administrador
+-- 4. FUNÇÕES DE AUTORIZAÇÃO E SEGURANÇA (SECURITY DEFINER)
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN AS $$
   SELECT EXISTS (
@@ -170,13 +41,11 @@ RETURNS BOOLEAN AS $$
   );
 $$ LANGUAGE sql STABLE SECURITY DEFINER;
 
--- Retorna o perfil/role do usuário autenticado
 CREATE OR REPLACE FUNCTION public.get_user_role()
 RETURNS TEXT AS $$
   SELECT role FROM public.profiles WHERE id = auth.uid() AND active = true LIMIT 1;
 $$ LANGUAGE sql STABLE SECURITY DEFINER;
 
--- Retorna true se o usuário tiver acesso à unidade especificada (ou for admin)
 CREATE OR REPLACE FUNCTION public.has_unit_access(target_unit_id TEXT)
 RETURNS BOOLEAN AS $$
   SELECT EXISTS (
@@ -190,9 +59,7 @@ RETURNS BOOLEAN AS $$
   );
 $$ LANGUAGE sql STABLE SECURITY DEFINER;
 
--- =========================================================================
--- TRIGGER DE SINCRONIZAÇÃO AUTOMÁTICA AUTH.USERS -> PROFILES
--- =========================================================================
+-- 5. TRIGGER DE CRIAÇÃO AUTOMÁTICA DE PERFIL QUANDO USUÁRIO É CRIADO NO AUTH
 CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -224,17 +91,12 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_auth_user();
 
--- =========================================================================
--- TRIGGER SERVER-SIDE DE AUDITORIA EM TEMPO REAL (PATIENTS)
--- Registra alterações críticas e dados identificados pelo JWT (auth.uid())
--- =========================================================================
+-- 6. TRIGGER SERVER-SIDE DE AUDITORIA COM IDENTIFICAÇÃO JWT
 CREATE OR REPLACE FUNCTION public.process_patient_audit()
 RETURNS TRIGGER AS $$
 DECLARE
   acting_uid TEXT;
   acting_name TEXT;
-  acting_unit TEXT;
-  acting_unit_name TEXT;
   action_type TEXT;
   desc_text TEXT;
 BEGIN
@@ -263,7 +125,7 @@ BEGIN
       NEW.unit_name,
       NULL,
       to_jsonb(NEW),
-      'Cadastro de paciente realizado via servidor',
+      'Cadastro de paciente registrado via servidor',
       true
     );
     RETURN NEW;
@@ -332,12 +194,7 @@ CREATE TRIGGER trg_audit_patients
   AFTER INSERT OR UPDATE OR DELETE ON public.patients
   FOR EACH ROW EXECUTE FUNCTION public.process_patient_audit();
 
--- =========================================================================
--- CONFIGURAÇÃO DE ROW LEVEL SECURITY (RLS) RIGOROSA
--- REMOVE POLÍTICAS ANTIGAS ABERTAS E APLICA AUTORIZAÇÃO POR USUÁRIO, PERFIL E UNIDADE
--- =========================================================================
-
--- Ativa RLS em todas as tabelas
+-- 7. ATIVAÇÃO DE RLS E REMOÇÃO DE POLÍTICAS ABERTAS
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.patients ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
@@ -348,7 +205,7 @@ ALTER TABLE public.procedures ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.doctors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.municipalities ENABLE ROW LEVEL SECURITY;
 
--- 1. LIMPEZA TOTAL DE POLÍTICAS INSEGURAS ANTERIORES (USING true / WITH CHECK true)
+-- Limpeza de políticas USING (true) antigas
 DROP POLICY IF EXISTS "Public access on municipalities" ON public.municipalities;
 DROP POLICY IF EXISTS "Public access on units" ON public.units;
 DROP POLICY IF EXISTS "Public access on procedures" ON public.procedures;
@@ -359,7 +216,6 @@ DROP POLICY IF EXISTS "Public access on audit_logs" ON public.audit_logs;
 DROP POLICY IF EXISTS "Public access on system_settings" ON public.system_settings;
 DROP POLICY IF EXISTS "Public access on profiles" ON public.profiles;
 
--- Limpa possíveis políticas anteriores
 DROP POLICY IF EXISTS "profiles_select_policy" ON public.profiles;
 DROP POLICY IF EXISTS "profiles_insert_policy" ON public.profiles;
 DROP POLICY IF EXISTS "profiles_update_policy" ON public.profiles;
@@ -375,119 +231,30 @@ DROP POLICY IF EXISTS "audit_logs_insert_policy" ON public.audit_logs;
 DROP POLICY IF EXISTS "audit_logs_update_block" ON public.audit_logs;
 DROP POLICY IF EXISTS "audit_logs_delete_block" ON public.audit_logs;
 
--- 2. POLÍTICAS DE PROFILES
--- Usuário lê seu próprio perfil; Admin lê todos
-CREATE POLICY "profiles_select_policy"
-ON public.profiles FOR SELECT
-TO authenticated
-USING (id = auth.uid() OR public.is_admin());
+-- 8. POLÍTICAS RLS ESPECÍFICAS
+-- Profiles: Usuário lê o seu; Admin lê e gerencia todos
+CREATE POLICY "profiles_select_policy" ON public.profiles FOR SELECT TO authenticated USING (id = auth.uid() OR public.is_admin());
+CREATE POLICY "profiles_insert_policy" ON public.profiles FOR INSERT TO authenticated WITH CHECK (public.is_admin());
+CREATE POLICY "profiles_update_policy" ON public.profiles FOR UPDATE TO authenticated USING (public.is_admin() OR id = auth.uid()) WITH CHECK (public.is_admin() OR (id = auth.uid() AND role = (SELECT role FROM public.profiles WHERE id = auth.uid())));
+CREATE POLICY "profiles_delete_policy" ON public.profiles FOR DELETE TO authenticated USING (public.is_admin());
 
--- Somente Admin pode criar perfis diretamente
-CREATE POLICY "profiles_insert_policy"
-ON public.profiles FOR INSERT
-TO authenticated
-WITH CHECK (public.is_admin());
+-- Patients: Autorização por unidade e perfil; Deleção física exclusiva de Admin
+CREATE POLICY "patients_select_policy" ON public.patients FOR SELECT TO authenticated USING (public.has_unit_access(unit_id) AND (is_deleted = false OR public.is_admin()));
+CREATE POLICY "patients_insert_policy" ON public.patients FOR INSERT TO authenticated WITH CHECK (public.has_unit_access(unit_id) AND public.get_user_role() IN ('admin', 'supervisor', 'regulator', 'attendant'));
+CREATE POLICY "patients_update_policy" ON public.patients FOR UPDATE TO authenticated USING (public.has_unit_access(unit_id) AND public.get_user_role() IN ('admin', 'supervisor', 'regulator', 'attendant')) WITH CHECK (public.has_unit_access(unit_id));
+CREATE POLICY "patients_delete_policy" ON public.patients FOR DELETE TO authenticated USING (public.is_admin());
 
--- Admin altera qualquer perfil; Usuário altera apenas seu próprio nome (sem alterar role ou permissions)
-CREATE POLICY "profiles_update_policy"
-ON public.profiles FOR UPDATE
-TO authenticated
-USING (public.is_admin() OR id = auth.uid())
-WITH CHECK (
-  public.is_admin() OR (
-    id = auth.uid() 
-    AND role = (SELECT role FROM public.profiles WHERE id = auth.uid())
-    AND permissions = (SELECT permissions FROM public.profiles WHERE id = auth.uid())
-    AND unit_ids = (SELECT unit_ids FROM public.profiles WHERE id = auth.uid())
-  )
-);
+-- Audit Logs: Somente leitura (Admin geral ou unidades do usuário); Inserção por autenticado/trigger; ALTERAÇÃO E EXCLUSÃO BLOQUEADAS
+CREATE POLICY "audit_logs_select_policy" ON public.audit_logs FOR SELECT TO authenticated USING (public.is_admin() OR (unit_id IS NOT NULL AND public.has_unit_access(unit_id)));
+CREATE POLICY "audit_logs_insert_policy" ON public.audit_logs FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "audit_logs_update_block" ON public.audit_logs FOR UPDATE TO authenticated USING (false);
+CREATE POLICY "audit_logs_delete_block" ON public.audit_logs FOR DELETE TO authenticated USING (false);
 
--- Somente Admin pode deletar perfis
-CREATE POLICY "profiles_delete_policy"
-ON public.profiles FOR DELETE
-TO authenticated
-USING (public.is_admin());
+-- System Settings
+CREATE POLICY "settings_select_policy" ON public.system_settings FOR SELECT TO authenticated USING (true);
+CREATE POLICY "settings_modify_admin_only" ON public.system_settings FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
 
--- 3. POLÍTICAS DE PACIENTES (PATIENTS)
--- Leitura restrita à unidade do usuário e bloqueia visualização de deletados para não-admin
-CREATE POLICY "patients_select_policy"
-ON public.patients FOR SELECT
-TO authenticated
-USING (
-  public.has_unit_access(unit_id)
-  AND (is_deleted = false OR public.is_admin())
-);
-
--- Criação restrita à unidade autorizada e perfis operacionais
-CREATE POLICY "patients_insert_policy"
-ON public.patients FOR INSERT
-TO authenticated
-WITH CHECK (
-  public.has_unit_access(unit_id)
-  AND public.get_user_role() IN ('admin', 'supervisor', 'regulator', 'attendant')
-);
-
--- Atualização restrita à unidade autorizada e perfis autorizados (bloqueia viewers)
-CREATE POLICY "patients_update_policy"
-ON public.patients FOR UPDATE
-TO authenticated
-USING (
-  public.has_unit_access(unit_id)
-  AND public.get_user_role() IN ('admin', 'supervisor', 'regulator', 'attendant')
-)
-WITH CHECK (
-  public.has_unit_access(unit_id)
-);
-
--- Exclusão física: EXCLUSIVA de Administrador (bloqueia atendentes, supervisores e reguladores)
-CREATE POLICY "patients_delete_policy"
-ON public.patients FOR DELETE
-TO authenticated
-USING (
-  public.is_admin()
-);
-
--- 4. POLÍTICAS DE AUDITORIA (AUDIT_LOGS)
--- Leitura: Admin lê tudo; Supervisor/Regulador lê apenas suas unidades
-CREATE POLICY "audit_logs_select_policy"
-ON public.audit_logs FOR SELECT
-TO authenticated
-USING (
-  public.is_admin() 
-  OR (unit_id IS NOT NULL AND public.has_unit_access(unit_id))
-);
-
--- Inserção: Permitida para usuários autenticados e triggers
-CREATE POLICY "audit_logs_insert_policy"
-ON public.audit_logs FOR INSERT
-TO authenticated
-WITH CHECK (true);
-
--- Alteração: ESTRITAMENTE BLOQUEADA (Integridade e Imutabilidade dos Logs de Auditoria)
-CREATE POLICY "audit_logs_update_block"
-ON public.audit_logs FOR UPDATE
-TO authenticated
-USING (false);
-
--- Exclusão: ESTRITAMENTE BLOQUEADA
-CREATE POLICY "audit_logs_delete_block"
-ON public.audit_logs FOR DELETE
-TO authenticated
-USING (false);
-
--- 5. POLÍTICAS DE CONFIGURAÇÕES (SYSTEM_SETTINGS)
-CREATE POLICY "settings_select_policy"
-ON public.system_settings FOR SELECT
-TO authenticated
-USING (true);
-
-CREATE POLICY "settings_modify_admin_only"
-ON public.system_settings FOR ALL
-TO authenticated
-USING (public.is_admin())
-WITH CHECK (public.is_admin());
-
--- 6. POLÍTICAS DE CADASTROS AUXILIARES (UNITS, PROCEDURES, DOCTORS, MUNICIPALITIES)
+-- Auxiliares (Units, Procedures, Doctors, Municipalities)
 CREATE POLICY "units_select_policy" ON public.units FOR SELECT TO authenticated USING (true);
 CREATE POLICY "units_write_policy" ON public.units FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
 
@@ -500,9 +267,7 @@ CREATE POLICY "doctors_write_policy" ON public.doctors FOR ALL TO authenticated 
 CREATE POLICY "municipalities_select_policy" ON public.municipalities FOR SELECT TO authenticated USING (true);
 CREATE POLICY "municipalities_write_policy" ON public.municipalities FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
 
--- =========================================================================
--- SINCRONIZAÇÃO INICIAL DO USUÁRIO ADMIN IGOR.BRITTO EM PROFILES
--- =========================================================================
+-- 9. VINCULAÇÃO IMEDIATA DO ADMIN IGOR.BRITTO EM PROFILES
 DO $$
 DECLARE
   admin_auth_id UUID;

@@ -436,8 +436,8 @@ const ForcedPasswordChangeModal: React.FC = () => {
     e.preventDefault();
     setError('');
 
-    if (newPassword.length < 4) {
-      setError('A nova senha deve possuir pelo menos 4 caracteres.');
+    if (newPassword.length < 6) {
+      setError('A nova senha deve possuir pelo menos 6 caracteres.');
       return;
     }
 
@@ -446,8 +446,8 @@ const ForcedPasswordChangeModal: React.FC = () => {
       return;
     }
 
-    if (newPassword === '123' || (currentUser && newPassword === currentUser.login)) {
-      setError('Por segurança, não utilize a senha padrão "123" nem o seu login.');
+    if (currentUser && newPassword.toLowerCase() === currentUser.login.toLowerCase()) {
+      setError('Por segurança, a senha não pode ser igual ao seu login.');
       return;
     }
 

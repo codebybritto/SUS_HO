@@ -217,7 +217,6 @@ export const INITIAL_USERS: User[] = [
     id: 'user-igor-britto',
     name: 'Igor Britto',
     login: 'igor.britto',
-    password: 'ho2026@',
     role: 'admin',
     active: true,
     unitIds: ['unit-1', 'unit-2', 'unit-3', 'unit-4'],
@@ -250,7 +249,6 @@ export const DEMO_USER: User = {
   id: 'user-demo',
   name: 'Operador de Demonstração (Simulado)',
   login: 'demo',
-  password: '',
   role: 'supervisor',
   active: true,
   unitIds: ['unit-1', 'unit-2', 'unit-3', 'unit-4'],
@@ -983,24 +981,17 @@ export const storageService = {
   },
 
   getRealPatients(): Patient[] {
+    // Dados reais são consultados estritamente do Supabase (Fonte Oficial)
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.REAL_PATIENTS);
-      if (data) {
-        const list = JSON.parse(data) as Patient[];
-        return list.map((p) => ({
-          ...p,
-          isSimulation: false,
-        }));
-      }
-      return [];
-    } catch {
-      return [];
-    }
+      localStorage.removeItem(STORAGE_KEYS.REAL_PATIENTS);
+    } catch {}
+    return [];
   },
 
-  saveRealPatients(patients: Patient[]): void {
+  saveRealPatients(_patients: Patient[]): void {
+    // Pacientes reais NÃO são gravados no localStorage por conformidade de segurança e privacidade clínica
     try {
-      localStorage.setItem(STORAGE_KEYS.REAL_PATIENTS, JSON.stringify(patients));
+      localStorage.removeItem(STORAGE_KEYS.REAL_PATIENTS);
     } catch {}
   },
 
@@ -1035,17 +1026,16 @@ export const storageService = {
   },
 
   getRealAuditLogs(): AuditLog[] {
+    // Logs reais são auditados no servidor via Supabase
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.REAL_AUDIT_LOGS);
-      return data ? JSON.parse(data) : [];
-    } catch {
-      return [];
-    }
+      localStorage.removeItem(STORAGE_KEYS.REAL_AUDIT_LOGS);
+    } catch {}
+    return [];
   },
 
-  saveRealAuditLogs(logs: AuditLog[]): void {
+  saveRealAuditLogs(_logs: AuditLog[]): void {
     try {
-      localStorage.setItem(STORAGE_KEYS.REAL_AUDIT_LOGS, JSON.stringify(logs));
+      localStorage.removeItem(STORAGE_KEYS.REAL_AUDIT_LOGS);
     } catch {}
   },
 
@@ -1157,8 +1147,10 @@ export const storageService = {
     localStorage.removeItem(STORAGE_KEYS.MUNICIPALITIES);
     localStorage.removeItem(STORAGE_KEYS.PROCEDURES);
     localStorage.removeItem(STORAGE_KEYS.DOCTORS);
-    localStorage.removeItem(STORAGE_KEYS.PATIENTS);
-    localStorage.removeItem(STORAGE_KEYS.AUDIT_LOGS);
+    localStorage.removeItem(STORAGE_KEYS.REAL_PATIENTS);
+    localStorage.removeItem(STORAGE_KEYS.DEMO_PATIENTS);
+    localStorage.removeItem(STORAGE_KEYS.REAL_AUDIT_LOGS);
+    localStorage.removeItem(STORAGE_KEYS.DEMO_AUDIT_LOGS);
     localStorage.removeItem(STORAGE_KEYS.SETTINGS);
     localStorage.removeItem(STORAGE_KEYS.ACTIVE_UNIT);
     localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);

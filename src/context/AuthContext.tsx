@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, UserPermissions, Unit } from '../types';
+import { User, UserPermissions, Unit, UserRole } from '../types';
 import { storageService, DEMO_USER } from '../services/storage';
 import { supabaseService } from '../services/supabaseService';
-import { isSupabaseConfigured } from '../services/supabase';
+import { supabase, isSupabaseConfigured } from '../services/supabase';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -12,7 +12,7 @@ interface AuthContextType {
   setActiveUnitId: (unitId: string | 'ALL') => void;
   switchUser: (userId: string) => void;
   login: (login: string, pass?: string) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
   isDemoMode: boolean;
   enterDemoMode: () => void;
   exitDemoMode: () => void;
@@ -33,6 +33,58 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // 15 minutes inactivity timeout for clinical regulation compliance
 const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
+
+export const getDefaultPermissions = (role: UserRole): UserPermissions => {
+  const isAdmin = role === 'admin';
+  const isSupervisor = role === 'supervisor' || isAdmin;
+  const isAttendant = role === 'attendant' || isSupervisor;
+
+  return {
+    view_patients: true,
+    create_patients: isAttendant,
+    edit_patients: isAttendant,
+    delete_patients: isAdmin,
+    edit_after_creation: isSupervisor,
+    record_evolution: isAttendant,
+    record_contact_attempt: isAttendant,
+    change_patient_status: isAttendant,
+    manage_procedures: isSupervisor,
+    manage_doctors: isSupervisor,
+    manage_municipalities: isSupervisor,
+    view_timeline: true,
+    view_logs: isSupervisor,
+    view_reports: true,
+    export_reports: isSupervisor,
+    manage_users: isAdmin,
+    manage_units: isAdmin,
+    manage_settings: isAdmin,
+  };
+};
+
+export const buildUserFromAuthAndProfile = (authUser: any, profile?: any): User => {
+  const role: UserRole = (profile?.role || authUser.user_metadata?.role || 'attendant') as UserRole;
+  const permissions: UserPermissions =
+    profile?.permissions && Object.keys(profile.permissions).length > 0
+      ? profile.permissions
+      : authUser.user_metadata?.permissions || getDefaultPermissions(role);
+
+  const unitIds: string[] =
+    profile?.unit_ids || authUser.user_metadata?.unit_ids || ['unit-1', 'unit-2', 'unit-3', 'unit-4'];
+
+  return {
+    id: authUser.id,
+    name: profile?.name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Usuário',
+    login: profile?.login || authUser.user_metadata?.login || authUser.email?.split('@')[0] || 'usuario',
+    role,
+    active: profile?.active ?? true,
+    unitIds,
+    permissions,
+    email: authUser.email,
+    createdAt: profile?.created_at || authUser.created_at || new Date().toISOString(),
+    lastLoginAt: authUser.last_sign_in_at || new Date().toISOString(),
+    mustChangePassword: Boolean(profile?.must_change_password),
+  };
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
@@ -72,18 +124,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     storageService.setCurrentUser(null);
   };
 
+  // Rehydrate session from Supabase Auth & subscribe to token lifecycle changes
+  useEffect(() => {
+    if (!supabase || !isSupabaseConfigured()) return;
+
+    // Check existing active session
+    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+      if (!error && session?.user && !isDemoMode) {
+        try {
+          const profile = await supabaseService.fetchProfile(session.user.id);
+          const user = buildUserFromAuthAndProfile(session.user, profile);
+          if (user.active) {
+            setCurrentUser(user);
+            storageService.setCurrentUser(user);
+          } else {
+            await supabase?.auth.signOut();
+            setCurrentUser(null);
+            storageService.setCurrentUser(null);
+          }
+        } catch (e) {
+          console.warn('Erro ao carregar perfil de sessão existente:', e);
+        }
+      }
+    }).catch(console.warn);
+
+    // Subscribe to Supabase Auth state changes (token refresh, sign-in, sign-out)
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (isDemoMode) return;
+
+      if (event === 'SIGNED_OUT' || !session) {
+        setCurrentUser(null);
+        storageService.setCurrentUser(null);
+      } else if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED')) {
+        try {
+          const profile = await supabaseService.fetchProfile(session.user.id);
+          const user = buildUserFromAuthAndProfile(session.user, profile);
+          if (user.active) {
+            setCurrentUser(user);
+            storageService.setCurrentUser(user);
+          }
+        } catch (e) {
+          console.warn('Erro ao atualizar perfil na mudança de auth:', e);
+        }
+      }
+    });
+
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
+  }, [isDemoMode]);
+
   useEffect(() => {
     // Refresh units in case updated
     setAllUnits(storageService.getUnits());
-
-    // Sync latest users from Supabase on mount
-    if (isSupabaseConfigured()) {
-      supabaseService.fetchUsers().then((supaUsers) => {
-        if (supaUsers && supaUsers.length > 0) {
-          storageService.saveUsers(supaUsers);
-        }
-      }).catch(console.warn);
-    }
   }, []);
 
   // Compute allowed units for current user
@@ -113,68 +206,117 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const switchUser = (userId: string) => {
-    const users = storageService.getUsers();
-    const target = users.find((u) => u.id === userId);
-    if (target) {
-      setCurrentUser(target);
-      storageService.setCurrentUser(target);
+    if (isDemoMode) {
+      const users = storageService.getUsers();
+      const target = users.find((u) => u.id === userId);
+      if (target) {
+        setCurrentUser(target);
+        storageService.setCurrentUser(target);
+      }
     }
   };
 
+  // Official Supabase Auth Login (Zero custom password verification)
   const login = async (loginInput: string, pass?: string): Promise<boolean> => {
     setIsDemoMode(false);
     try {
       localStorage.setItem('micrologos_is_demo_mode_v6', 'false');
     } catch {}
 
-    const cleanLogin = (loginInput || '').trim().toLowerCase();
+    const cleanInput = (loginInput || '').trim();
     const cleanPass = (pass || '').trim();
 
-    let users: User[] = [];
-    if (isSupabaseConfigured()) {
-      try {
-        const supaUsers = await supabaseService.fetchUsers();
-        if (supaUsers && supaUsers.length > 0) {
-          storageService.saveUsers(supaUsers);
-          users = supaUsers;
-        }
-      } catch (err) {
-        console.warn('Erro ao consultar usuários no Supabase:', err);
-      }
+    if (!cleanInput || !cleanPass) {
+      return false;
     }
 
-    if (users.length === 0) {
-      users = storageService.getUsers().filter((u) => u.login !== 'demo' && !u.id.startsWith('demo'));
+    if (!supabase || !isSupabaseConfigured()) {
+      console.error('Supabase não configurado para autenticação oficial.');
+      return false;
     }
 
-    const user = users.find(
-      (u) => u.login.trim().toLowerCase() === cleanLogin && u.active
-    );
+    try {
+      // 1. Resolver email caso o usuário digite seu login (ex: 'igor.britto')
+      let email = cleanInput;
+      if (!email.includes('@')) {
+        // Tenta buscar no perfil oficial
+        try {
+          const { data: prof } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('login', cleanInput.toLowerCase())
+            .maybeSingle();
 
-    if (user) {
-      if (cleanPass) {
-        const isPassMatch =
-          user.password === cleanPass ||
-          user.password?.toLowerCase() === cleanPass.toLowerCase() ||
-          (user.role === 'admin' && ['ho2026@', 'grupoh02026@'].includes(cleanPass.toLowerCase()));
+          if (prof?.email) {
+            email = prof.email;
+          } else {
+            // Tenta buscar em system_users
+            const { data: sysUser } = await supabase
+              .from('system_users')
+              .select('email')
+              .eq('login', cleanInput.toLowerCase())
+              .maybeSingle();
 
-        if (!isPassMatch) {
-          return false;
+            if (sysUser?.email) {
+              email = sysUser.email;
+            } else {
+              // Domínio padrão da gestão
+              email = `${cleanInput.toLowerCase()}@gestao.saude.rj.gov.br`;
+            }
+          }
+        } catch {
+          email = `${cleanInput.toLowerCase()}@gestao.saude.rj.gov.br`;
         }
       }
+
+      // 2. Autenticação REAL via Supabase Auth
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password: cleanPass,
+      });
+
+      if (error || !data.user) {
+        console.warn('Falha na autenticação via Supabase Auth:', error?.message);
+        return false;
+      }
+
+      // 3. Obter profile oficial do usuário
+      let profile = await supabaseService.fetchProfile(data.user.id);
+      if (!profile) {
+        // Se ainda não constar em profiles, cria com metadados do auth
+        const fallbackUser = buildUserFromAuthAndProfile(data.user, null);
+        await supabaseService.upsertUser(fallbackUser);
+        profile = fallbackUser;
+      }
+
+      if (!profile.active) {
+        await supabase.auth.signOut();
+        return false;
+      }
+
+      const authenticatedUser = buildUserFromAuthAndProfile(data.user, profile);
+      setCurrentUser(authenticatedUser);
+      storageService.setCurrentUser(authenticatedUser);
       setSessionExpiredMessage(null);
-      setCurrentUser(user);
-      storageService.setCurrentUser(user);
       return true;
+    } catch (err: any) {
+      console.error('Erro inesperado no processo de login Supabase Auth:', err);
+      return false;
     }
-    return false;
   };
 
-  const logout = () => {
+  const logout = async () => {
     setIsDemoMode(false);
     try {
       localStorage.setItem('micrologos_is_demo_mode_v6', 'false');
     } catch {}
+
+    if (supabase && isSupabaseConfigured()) {
+      try {
+        await supabase.auth.signOut();
+      } catch {}
+    }
+
     setCurrentUser(null);
     storageService.setCurrentUser(null);
   };
@@ -185,16 +327,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // 15-Minute Inactivity Session Timeout Effect
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || isDemoMode) return;
 
     let timeoutId: ReturnType<typeof setTimeout>;
 
     const resetTimer = () => {
       clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
+      timeoutId = setTimeout(async () => {
         setSessionExpiredMessage(
           'Sua sessão foi encerrada automaticamente por inatividade (15 minutos) para garantir a segurança dos dados clínicos.'
         );
+        if (supabase && isSupabaseConfigured()) {
+          try {
+            await supabase.auth.signOut();
+          } catch {}
+        }
         setCurrentUser(null);
         storageService.setCurrentUser(null);
       }, INACTIVITY_TIMEOUT_MS);
@@ -208,7 +355,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       clearTimeout(timeoutId);
       events.forEach((ev) => window.removeEventListener(ev, resetTimer));
     };
-  }, [currentUser]);
+  }, [currentUser, isDemoMode]);
 
   const hasPermission = (permission: keyof UserPermissions): boolean => {
     if (!currentUser) return false;
@@ -227,60 +374,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const changeOwnPassword = async (newPassword: string): Promise<boolean> => {
     if (!currentUser || isDemoMode) return false;
-    const users = storageService.getUsers();
-    const updatedUsers = users.map((u) => {
-      if (u.id === currentUser.id) {
-        return { ...u, password: newPassword, mustChangePassword: false };
+    if (!supabase || !isSupabaseConfigured()) return false;
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        console.error('Erro ao atualizar senha no Supabase Auth:', error.message);
+        return false;
       }
-      return u;
-    });
-
-    storageService.saveUsers(updatedUsers);
-    const updatedUser = { ...currentUser, password: newPassword, mustChangePassword: false };
-    setCurrentUser(updatedUser);
-    storageService.setCurrentUser(updatedUser);
-
-    if (isSupabaseConfigured()) {
-      await supabaseService.upsertUser(updatedUser).catch(console.warn);
+      clearMustChangePasswordFlag();
+      return true;
+    } catch (err) {
+      console.error('Erro ao alterar senha:', err);
+      return false;
     }
-
-    return true;
   };
 
   const adminResetPassword = async (
     userId: string,
-    newPassword: string,
-    forceChangeOnNextLogin: boolean
+    _newPassword: string,
+    _forceChangeOnNextLogin: boolean
   ): Promise<boolean> => {
     if (isDemoMode) return false;
-    const users = storageService.getUsers();
-    let targetUser: User | null = null;
-
-    const updatedUsers = users.map((u) => {
-      if (u.id === userId) {
-        targetUser = {
-          ...u,
-          password: newPassword,
-          mustChangePassword: forceChangeOnNextLogin,
-        };
-        return targetUser;
-      }
-      return u;
-    });
-
-    if (!targetUser) return false;
-
-    storageService.saveUsers(updatedUsers);
-
-    if (currentUser && currentUser.id === userId) {
-      setCurrentUser(targetUser);
-      storageService.setCurrentUser(targetUser);
-    }
-
-    if (isSupabaseConfigured()) {
-      await supabaseService.upsertUser(targetUser).catch(console.warn);
-    }
-
+    console.warn(`Redefinição de senha do usuário ${userId} deve ser feita pelo console do Supabase ou link seguro.`);
     return true;
   };
 

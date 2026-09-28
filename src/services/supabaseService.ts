@@ -367,10 +367,34 @@ export const supabaseService = {
     return !error;
   },
 
-  // --- Users ---
+  // --- Users & Profiles (Supabase Auth & Profiles) ---
   async fetchUsers(): Promise<User[] | null> {
     if (!supabase || !isSupabaseConfigured()) return null;
-    const { data, error } = await supabase.from('system_users').select('*');
+
+    // Tenta carregar primeiro da tabela oficial 'profiles'
+    try {
+      const { data: profs, error: profErr } = await supabase.from('profiles').select('*');
+      if (!profErr && profs && profs.length > 0) {
+        return profs.map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          login: r.login,
+          role: r.role,
+          active: r.active,
+          unitIds: r.unit_ids || [],
+          permissions: r.permissions || {},
+          email: r.email,
+          createdAt: r.created_at,
+          lastLoginAt: undefined,
+          mustChangePassword: false,
+        }));
+      }
+    } catch {
+      // continua para fallback
+    }
+
+    // Fallback para 'system_users' (sem campo de senha)
+    const { data, error } = await supabase.from('system_users').select('id, name, login, role, active, unit_ids, permissions, email, created_at, last_login_at, must_change_password');
     if (error) {
       console.warn('Erro ao carregar usuários do Supabase:', error.message);
       return null;
@@ -379,7 +403,6 @@ export const supabaseService = {
       id: r.id,
       name: r.name,
       login: r.login,
-      password: r.password,
       role: r.role,
       active: r.active,
       unitIds: r.unit_ids || [],
@@ -391,13 +414,50 @@ export const supabaseService = {
     }));
   },
 
+  async fetchProfile(userId: string): Promise<User | null> {
+    if (!supabase || !isSupabaseConfigured() || !userId) return null;
+    try {
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+      if (!error && data) {
+        return {
+          id: data.id,
+          name: data.name,
+          login: data.login,
+          role: data.role,
+          active: data.active,
+          unitIds: data.unit_ids || [],
+          permissions: data.permissions || {},
+          email: data.email,
+          createdAt: data.created_at,
+        };
+      }
+    } catch {}
+    return null;
+  },
+
   async upsertUser(u: User): Promise<boolean> {
     if (!supabase || !isSupabaseConfigured()) return false;
+
+    // Tenta atualizar/inserir em profiles
+    try {
+      await supabase.from('profiles').upsert({
+        id: u.id,
+        name: u.name,
+        login: u.login,
+        role: u.role,
+        active: u.active,
+        unit_ids: u.unitIds || [],
+        permissions: u.permissions,
+        email: u.email || `${u.login}@gestao.saude.rj.gov.br`,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'id' });
+    } catch {}
+
+    // Mantém compatibilidade com system_users sem senha
     const { error } = await supabase.from('system_users').upsert({
       id: u.id,
       name: u.name,
       login: u.login,
-      password: u.password,
       role: u.role,
       active: u.active,
       unit_ids: u.unitIds || [],
@@ -416,7 +476,6 @@ export const supabaseService = {
       id: u.id,
       name: u.name,
       login: u.login,
-      password: u.password,
       role: u.role,
       active: u.active,
       unit_ids: u.unitIds || [],
@@ -432,6 +491,9 @@ export const supabaseService = {
 
   async deleteUser(id: string): Promise<boolean> {
     if (!supabase || !isSupabaseConfigured()) return false;
+    try {
+      await supabase.from('profiles').delete().eq('id', id);
+    } catch {}
     const { error } = await supabase.from('system_users').delete().eq('id', id);
     return !error;
   },

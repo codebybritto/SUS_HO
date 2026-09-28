@@ -18,6 +18,7 @@ import {
 import { storageService } from '../services/storage';
 import { supabaseService } from '../services/supabaseService';
 import { isSupabaseConfigured } from '../services/supabase';
+import { syncQueueService } from '../services/syncQueueService';
 import { useAuth } from './AuthContext';
 
 export type SupabaseStatus = 'connected' | 'offline' | 'syncing' | 'unconfigured' | 'error';
@@ -141,13 +142,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const currentUserId = currentUser?.id || 'system';
   const currentUserName = currentUser?.name || 'Sistema';
 
-  // Helper to sync patient changes to Supabase in background
+  // Helper to sync patient changes to Supabase with offline queue fallback
   const syncPatientToSupabase = useCallback((patient: Patient) => {
     if (isDemoMode) return;
     if (isSupabaseConfigured()) {
-      supabaseService.upsertPatient(patient).catch((err) => {
-        console.warn('Erro ao salvar paciente no Supabase:', err);
-      });
+      if (syncQueueService.isOnline()) {
+        supabaseService.upsertPatient(patient).then((ok) => {
+          if (!ok) {
+            syncQueueService.enqueue('UPSERT_PATIENT', patient.id, patient);
+          }
+        }).catch((err) => {
+          console.warn('Erro ao salvar paciente no Supabase, enfileirando offline:', err);
+          syncQueueService.enqueue('UPSERT_PATIENT', patient.id, patient);
+        });
+      } else {
+        syncQueueService.enqueue('UPSERT_PATIENT', patient.id, patient);
+      }
     }
   }, [isDemoMode]);
 
@@ -274,14 +284,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setPatients(storageService.getDemoPatients());
       setAuditLogs(storageService.getDemoAuditLogs());
     } else {
-      // In real mode, strictly load real data and immediately sync with Supabase
-      setPatients(storageService.getRealPatients());
-      setAuditLogs(storageService.getRealAuditLogs());
+      // In real mode, strictly load real data from Supabase
+      setPatients([]);
+      setAuditLogs([]);
       if (isSupabaseConfigured()) {
         reloadFromSupabase();
       }
     }
   }, [isDemoMode, currentUser?.id, reloadFromSupabase]);
+
+  // Reconnect listener: process offline queue automatically when connection is restored
+  useEffect(() => {
+    if (isDemoMode) return;
+
+    const unsubscribe = syncQueueService.subscribe(async (count, isOnline) => {
+      if (isOnline && count > 0 && isSupabaseConfigured()) {
+        try {
+          const result = await syncQueueService.flush({
+            onUpsertPatient: async (p) => supabaseService.upsertPatient(p),
+            onDeletePatient: async (id) => supabaseService.deletePatient(id),
+            onInsertAudit: async (l) => supabaseService.insertAuditLog(l),
+          });
+          if (result.processed > 0) {
+            reloadFromSupabase();
+          }
+        } catch (e) {
+          console.warn('Erro ao processar fila offline de pacientes:', e);
+        }
+      }
+    });
+
+    return unsubscribe;
+  }, [isDemoMode, reloadFromSupabase]);
 
   // Save changes to LocalStorage whenever state updates (offline cache) with strict mode separation
   useEffect(() => {
