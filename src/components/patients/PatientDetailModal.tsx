@@ -255,12 +255,11 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({
 
         <div class="footer">
           <div>
-            <div>Sistema de Gestão e Controle de Pacientes</div>
-            <div>Documento emitido eletronicamente para fins regulatórios e assistenciais.</div>
+            <div>Sistema de Gestão e Controle de Pacientes · Emissão Eletrônica</div>
+            <div>Documento emitido para fins regulatórios e assistenciais.</div>
           </div>
-          <div class="sig-box">
-            <div>${currentUser?.name || 'Administrador Responsável'}</div>
-            <div style="font-size: 8px; color: #64748b; font-weight: normal;">Assinatura / Carimbo do Responsável</div>
+          <div>
+            <div>Operador: <strong>${currentUser?.name || 'Administrador Responsável'}</strong></div>
           </div>
         </div>
       </body>
@@ -274,7 +273,7 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({
     const htmlContent = generatePatientReportHtml();
     const safeName = patient.name.replace(/[^a-zA-Z0-9]/g, '_');
     try {
-      await exportHtmlToPdf(htmlContent, `historico_paciente_${safeName}.pdf`);
+      await exportHtmlToPdf(htmlContent, `historico_paciente_${safeName}.pdf`, { orientation: 'portrait' });
     } catch (e) {
       console.error('Falha ao exportar PDF direto, usando impressão como fallback:', e);
       window.print();

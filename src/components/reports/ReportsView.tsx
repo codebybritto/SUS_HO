@@ -167,8 +167,11 @@ export const ReportsView: React.FC = () => {
     setSelectedFollowup('ALL');
   };
 
+  // State for report orientation (Landscape recommended for wide 7-column table, Portrait also supported)
+  const [reportOrientation, setReportOrientation] = useState<'landscape' | 'portrait'>('landscape');
+
   // Generate synthetic, space-efficient HTML string for printable iframe and PDF export
-  const generateFormattedReportHtml = () => {
+  const generateFormattedReportHtml = (orientation: 'landscape' | 'portrait' = reportOrientation) => {
     const now = new Date();
     const dateFormatted = now.toLocaleDateString('pt-BR');
     const timeFormatted = now.toLocaleTimeString('pt-BR');
@@ -198,6 +201,8 @@ export const ReportsView: React.FC = () => {
 
     const unitObj = selectedUnit === 'ALL' ? null : units.find((u) => u.id === selectedUnit);
 
+    const isLand = orientation === 'landscape';
+
     const tableRows = filteredPatients
       .map((p, idx) => {
         const style = getStatusStyle(p.currentStatus);
@@ -213,27 +218,27 @@ export const ReportsView: React.FC = () => {
 
         return `
         <tr style="background-color: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'}; border-bottom: 1px solid #e2e8f0; page-break-inside: avoid;">
-          <td style="padding: 3.5px 4px; font-size: 8.5px; text-align: center; color: #64748b; font-weight: 700;">${idx + 1}</td>
-          <td style="padding: 3.5px 6px; font-weight: 700; color: #0f172a; font-size: 9.5px; white-space: nowrap;">
+          <td style="padding: 5px 4px; font-size: 8.5px; text-align: center; color: #64748b; font-weight: 700; border-right: 1px solid #e2e8f0;">${idx + 1}</td>
+          <td style="padding: 5px 6px; font-weight: 700; color: #0f172a; font-size: 10px; border-right: 1px solid #e2e8f0;">
             ${p.name}
             <span style="font-weight: normal; color: #64748b; font-size: 8.5px;">(${age !== null ? `${age}a` : '-'})</span>
             ${p.isUrgent ? '<span style="display:inline-block; margin-left:3px; font-size:7.5px; background-color:#fee2e2; color:#b91c1c; border:1px solid #f87171; border-radius:2px; padding:0 2px; font-weight:800;">URG</span>' : ''}
           </td>
-          <td style="padding: 3.5px 6px; font-size: 8.5px; line-height: 1.2; color: #1e293b;">
+          <td style="padding: 5px 6px; font-size: 8.5px; line-height: 1.25; color: #1e293b; border-right: 1px solid #e2e8f0;">
             ${procNames}
           </td>
-          <td style="padding: 3.5px 5px; font-size: 8.5px; color: #334155;">
+          <td style="padding: 5px 6px; font-size: 8.5px; color: #334155; line-height: 1.25; border-right: 1px solid #e2e8f0;">
             <strong>${p.city}</strong> · <span style="color:#64748b; font-size:8px;">${shortUnit}</span>
           </td>
-          <td style="padding: 3.5px 5px; font-size: 8.5px; color: #334155;">
+          <td style="padding: 5px 6px; font-size: 8.5px; color: #334155; line-height: 1.25; border-right: 1px solid #e2e8f0;">
             ${p.requestingDoctorName || 'Não inf.'} · <span style="color:#64748b; font-size:8px;">${formatDateBR(p.requestedDate)}</span>
           </td>
-          <td style="padding: 3.5px 4px; text-align: center;">
-            <span style="display: inline-block; padding: 1px 5px; border-radius: 9999px; font-size: 8px; font-weight: 800; border: 1px solid ${style.borderColor}; background-color: #ffffff; color: ${style.dotColor}; text-transform: uppercase;">
+          <td style="padding: 5px 4px; text-align: center; border-right: 1px solid #e2e8f0;">
+            <span style="display: inline-block; padding: 1.5px 6px; border-radius: 9999px; font-size: 8px; font-weight: 800; border: 1px solid ${style.borderColor}; background-color: #ffffff; color: ${style.dotColor}; text-transform: uppercase;">
               ${style.label}
             </span>
           </td>
-          <td style="padding: 3.5px 4px; text-align: center; font-size: 8.5px; color: #475569; white-space: nowrap;">
+          <td style="padding: 5px 4px; text-align: center; font-size: 8.5px; color: #475569; white-space: nowrap;">
             <span>${contactCount}c</span> · <span style="${absenceCount > 0 ? 'color:#b91c1c; font-weight:700;' : 'color:#64748b;'}">${absenceCount}f</span>
           </td>
         </tr>
@@ -250,135 +255,28 @@ export const ReportsView: React.FC = () => {
         <style>
           * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           @page {
-            size: A4 portrait;
-            margin: 6mm 5mm;
+            size: A4 ${orientation};
+            margin: 8mm 6mm;
           }
           body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             color: #0f172a;
             background: #ffffff;
             margin: 0;
-            padding: 8px 10px;
+            padding: ${isLand ? '8px 12px' : '8px 8px'};
             font-size: 9px;
-            line-height: 1.25;
+            line-height: 1.3;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
-          }
-          .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-            border-bottom: 1.5px solid #334155;
-            padding-bottom: 5px;
-            margin-bottom: 5px;
-          }
-          .logo-box {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-          }
-          .logo-img {
-            height: 38px;
-            width: auto;
-            max-width: 48px;
-            object-fit: contain;
-          }
-          .brand-title {
-            font-size: 13px;
-            font-weight: 900;
-            color: #0f172a;
-            text-transform: uppercase;
-            letter-spacing: -0.2px;
-          }
-          .brand-sub {
-            font-size: 8.5px;
-            color: #475569;
-            font-weight: 600;
-            margin-top: 1px;
-          }
-          .meta-box {
-            text-align: right;
-            font-size: 8.5px;
-            color: #334155;
-            background: #f8fafc;
-            border: 1px solid #cbd5e1;
-            border-radius: 4px;
-            padding: 4px 7px;
-            white-space: nowrap;
-          }
-          .summary-bar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 4px;
-            background: #f8fafc;
-            border: 1px solid #cbd5e1;
-            border-radius: 4px;
-            padding: 3px 6px;
-            margin-bottom: 6px;
-            font-size: 8px;
-          }
-          .filter-text {
-            color: #475569;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            max-width: 380px;
-          }
-          .kpi-chips {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            flex-wrap: wrap;
-          }
-          .chip {
-            display: inline-block;
-            padding: 1px 4px;
-            border-radius: 3px;
-            border: 1px solid #cbd5e1;
-            background: #ffffff;
-            font-weight: 600;
-            color: #334155;
           }
           table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 8.5px;
-            margin-bottom: 6px;
           }
           thead {
             display: table-header-group;
           }
-          th {
-            background: #1e293b;
-            color: #ffffff;
-            font-weight: 800;
-            text-align: left;
-            padding: 4px 5px;
-            font-size: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            border: 1px solid #0f172a;
-          }
           tr {
-            page-break-inside: avoid;
-          }
-          td {
-            padding: 3.5px 5px;
-            border-bottom: 1px solid #e2e8f0;
-            font-size: 8.5px;
-          }
-          .footer {
-            margin-top: 6px;
-            border-top: 1px solid #cbd5e1;
-            padding-top: 4px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 8px;
-            color: #64748b;
             page-break-inside: avoid;
           }
           @media print {
@@ -390,60 +288,89 @@ export const ReportsView: React.FC = () => {
         </style>
       </head>
       <body>
-        <!-- Synthetic Header -->
-        <div class="header">
-          <div class="logo-box">
-            <img src="${LOGO_BASE64}" alt="Brasão Oficial" class="logo-img" />
-            <div>
-              <div class="brand-title">Relatório Geral de Pacientes</div>
-              <div class="brand-sub">Controle de Fluxo e Linha do Tempo Ambulatorial · ${unitObj ? `${unitObj.name}` : 'Todas as Unidades Autorizadas'}</div>
-            </div>
-          </div>
+        <!-- Header -->
+        <table style="width: 100%; border-bottom: 2px solid #0f1d33; padding-bottom: 6px; margin-bottom: 6px; border-collapse: collapse;">
+          <tr>
+            <td style="vertical-align: middle; text-align: left;">
+              <table style="border-collapse: collapse;">
+                <tr>
+                  <td style="vertical-align: middle; padding-right: 10px;">
+                    <img src="${LOGO_BASE64}" alt="Brasão Oficial" style="height: 42px; width: auto; max-width: 52px; object-fit: contain; display: block;" />
+                  </td>
+                  <td style="vertical-align: middle;">
+                    <div style="font-size: 14px; font-weight: 900; color: #0f1d33; text-transform: uppercase; letter-spacing: -0.3px;">Relatório Geral de Pacientes</div>
+                    <div style="font-size: 9px; color: #475569; font-weight: 600; margin-top: 1px;">Controle de Fluxo e Linha do Tempo Ambulatorial · ${unitObj ? `${unitObj.name}` : 'Todas as Unidades Autorizadas'}</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+            <td style="vertical-align: middle; text-align: right; width: 330px;">
+              <div style="font-size: 8.5px; color: #334155; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 8px; line-height: 1.35; display: inline-block; text-align: right;">
+                <div><strong>Protocolo:</strong> <code style="font-family: monospace; font-weight: bold; color: #0f172a;">${reportCode}</code></div>
+                <div><strong>Emissão:</strong> ${dateFormatted} às ${timeFormatted} · <strong>Operador:</strong> ${currentUser?.name || 'Administrador'}</div>
+              </div>
+            </td>
+          </tr>
+        </table>
 
-          <div class="meta-box">
-            <div><strong>Protocolo:</strong> <code style="font-family:monospace; font-weight:bold; color:#0f172a;">${reportCode}</code></div>
-            <div><strong>Emissão:</strong> ${dateFormatted} ${timeFormatted} · <strong>Operador:</strong> ${currentUser?.name || 'Administrador'}</div>
-          </div>
-        </div>
+        <!-- Structured KPI Strip (Table-based for guaranteed stability, zero clipping) -->
+        <table style="width: 100%; border-collapse: separate; border-spacing: 4px; margin-bottom: 5px; table-layout: fixed;">
+          <tr>
+            <td style="background: #f8fafc; border: 1px solid #cbd5e1; border-left: 3.5px solid #0f1d33; border-radius: 4px; padding: 4px 6px; text-align: center;">
+              <div style="font-size: 7.5px; font-weight: 700; color: #64748b; text-transform: uppercase;">Total</div>
+              <div style="font-size: 11.5px; font-weight: 900; color: #0f1d33;">${summary.total}</div>
+            </td>
+            <td style="background: #f0f9ff; border: 1px solid #bae6fd; border-left: 3.5px solid #0284c7; border-radius: 4px; padding: 4px 6px; text-align: center;">
+              <div style="font-size: 7.5px; font-weight: 700; color: #0369a1; text-transform: uppercase;">Agendados</div>
+              <div style="font-size: 11.5px; font-weight: 900; color: #0284c7;">${summary.agendados}</div>
+            </td>
+            <td style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 3.5px solid #16a34a; border-radius: 4px; padding: 4px 6px; text-align: center;">
+              <div style="font-size: 7.5px; font-weight: 700; color: #15803d; text-transform: uppercase;">Regulados</div>
+              <div style="font-size: 11.5px; font-weight: 900; color: #16a34a;">${summary.regulados}</div>
+            </td>
+            <td style="background: #fffbeb; border: 1px solid #fde68a; border-left: 3.5px solid #d97706; border-radius: 4px; padding: 4px 6px; text-align: center;">
+              <div style="font-size: 7.5px; font-weight: 700; color: #b45309; text-transform: uppercase;">Micrologos</div>
+              <div style="font-size: 11.5px; font-weight: 900; color: #d97706;">${summary.micrologos}</div>
+            </td>
+            <td style="background: #fff1f2; border: 1px solid #fecdd3; border-left: 3.5px solid #e11d48; border-radius: 4px; padding: 4px 6px; text-align: center;">
+              <div style="font-size: 7.5px; font-weight: 700; color: #be123c; text-transform: uppercase;">Sem Contato</div>
+              <div style="font-size: 11.5px; font-weight: 900; color: #e11d48;">${summary.semInteracao}</div>
+            </td>
+            <td style="background: #fef2f2; border: 1px solid #fecaca; border-left: 3.5px solid #dc2626; border-radius: 4px; padding: 4px 6px; text-align: center;">
+              <div style="font-size: 7.5px; font-weight: 700; color: #b91c1c; text-transform: uppercase;">Urgentes</div>
+              <div style="font-size: 11.5px; font-weight: 900; color: #dc2626;">${summary.urgentes}</div>
+            </td>
+          </tr>
+        </table>
 
-        <!-- Synthetic Summary Ribbon -->
-        <div class="summary-bar">
-          <div class="filter-text">
-            <strong>Filtros:</strong> ${filterDescription}
-          </div>
-          <div class="kpi-chips">
-            <span class="chip" style="border-color:#334155;">Total: <strong>${summary.total}</strong></span>
-            <span class="chip" style="color:#0369a1; border-color:#7dd3fc; background:#f0f9ff;">Agendados: <strong>${summary.agendados}</strong></span>
-            <span class="chip" style="color:#047857; border-color:#86efac; background:#f0fdf4;">Regulados: <strong>${summary.regulados}</strong></span>
-            <span class="chip" style="color:#b45309; border-color:#fde68a; background:#fffbeb;">Micrologos: <strong>${summary.micrologos}</strong></span>
-            <span class="chip" style="color:#be123c; border-color:#fecdd3; background:#fff1f2;">Sem Contato: <strong>${summary.semInteracao}</strong></span>
-            <span class="chip" style="color:#b91c1c; border-color:#fca5a5; background:#fef2f2;">Urgentes: <strong>${summary.urgentes}</strong></span>
-          </div>
+        <!-- Filter Description (Rock-solid layout without text truncation) -->
+        <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 8px; margin-bottom: 6px; font-size: 8.5px; color: #334155; line-height: 1.35;">
+          <strong style="color: #0f1d33;">FILTROS APLICADOS:</strong> ${filterDescription}
         </div>
 
         <!-- Patients Table -->
-        <table>
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; table-layout: fixed; margin-bottom: 6px;">
           <thead>
-            <tr>
-              <th style="width: 20px; text-align: center;">#</th>
-              <th style="width: 175px;">Paciente (Idade)</th>
-              <th>Procedimento(s) Solicitado(s) & Olho</th>
-              <th style="width: 125px;">Município / Unidade</th>
-              <th style="width: 125px;">Médico / Solicitação</th>
-              <th style="width: 78px; text-align: center;">Status</th>
-              <th style="width: 50px; text-align: center;">Cont./Falt.</th>
+            <tr style="background: #0f1d33; color: #ffffff;">
+              <th style="width: ${isLand ? '3.5%' : '4%'}; padding: 6px 4px; font-size: 8.5px; font-weight: 800; text-align: center; border: 1px solid #0f1d33; text-transform: uppercase;">#</th>
+              <th style="width: ${isLand ? '22%' : '22%'}; padding: 6px 6px; font-size: 8.5px; font-weight: 800; text-align: left; border: 1px solid #0f1d33; text-transform: uppercase;">Paciente (Idade)</th>
+              <th style="width: ${isLand ? '28%' : '26%'}; padding: 6px 6px; font-size: 8.5px; font-weight: 800; text-align: left; border: 1px solid #0f1d33; text-transform: uppercase;">Procedimento(s) & Olho</th>
+              <th style="width: ${isLand ? '18%' : '17%'}; padding: 6px 6px; font-size: 8.5px; font-weight: 800; text-align: left; border: 1px solid #0f1d33; text-transform: uppercase;">Município / Unidade</th>
+              <th style="width: ${isLand ? '15%' : '16%'}; padding: 6px 6px; font-size: 8.5px; font-weight: 800; text-align: left; border: 1px solid #0f1d33; text-transform: uppercase;">Médico / Solicitação</th>
+              <th style="width: ${isLand ? '9%' : '10%'}; padding: 6px 4px; font-size: 8.5px; font-weight: 800; text-align: center; border: 1px solid #0f1d33; text-transform: uppercase;">Status</th>
+              <th style="width: ${isLand ? '4.5%' : '5%'}; padding: 6px 4px; font-size: 8.5px; font-weight: 800; text-align: center; border: 1px solid #0f1d33; text-transform: uppercase;">Cont./Falt.</th>
             </tr>
           </thead>
           <tbody>
             ${
               tableRows ||
-              '<tr><td colspan="7" style="text-align: center; padding: 12px; color: #64748b;">Nenhum paciente localizado para os critérios selecionados.</td></tr>'
+              '<tr><td colspan="7" style="text-align: center; padding: 16px; color: #64748b; font-size: 9.5px;">Nenhum paciente localizado para os critérios selecionados.</td></tr>'
             }
           </tbody>
         </table>
 
-        <!-- Document Footer (Without Signature Box) -->
-        <div class="footer">
+        <!-- Document Footer -->
+        <div style="border-top: 1.5px solid #cbd5e1; padding-top: 5px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 8.5px; color: #64748b;">
           <div>Sistema de Gestão e Controle de Pacientes · Emissão Eletrônica em ${dateFormatted} às ${timeFormatted} · Operador: ${currentUser?.name || 'Administrador Geral'}</div>
           <div>Total de Pacientes Listados: <strong>${filteredPatients.length}</strong></div>
         </div>
@@ -512,10 +439,10 @@ export const ReportsView: React.FC = () => {
 
   const handleSaveReportPdf = async () => {
     setIsGeneratingPdf(true);
-    const htmlContent = generateFormattedReportHtml();
+    const htmlContent = generateFormattedReportHtml(reportOrientation);
     const dateStr = new Date().toISOString().slice(0, 10);
     try {
-      await exportHtmlToPdf(htmlContent, `relatorio_pacientes_${dateStr}.pdf`);
+      await exportHtmlToPdf(htmlContent, `relatorio_pacientes_${dateStr}.pdf`, { orientation: reportOrientation });
     } catch (e) {
       console.error('Falha ao gerar PDF diretamente, abrindo impressão como fallback:', e);
       window.print();
@@ -594,12 +521,40 @@ export const ReportsView: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {/* Orientation Selector */}
+            <div className="flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-300">
+              <button
+                type="button"
+                onClick={() => setReportOrientation('landscape')}
+                className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                  reportOrientation === 'landscape'
+                    ? 'bg-blue-600 text-white shadow-xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="Orientação Paisagem (Horizontal) — Recomendada para relatórios com 7 colunas"
+              >
+                Paisagem
+              </button>
+              <button
+                type="button"
+                onClick={() => setReportOrientation('portrait')}
+                className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                  reportOrientation === 'portrait'
+                    ? 'bg-blue-600 text-white shadow-xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="Orientação Retrato (Vertical)"
+              >
+                Retrato
+              </button>
+            </div>
+
             <button
               type="button"
               onClick={handleSaveReportPdf}
               disabled={isGeneratingPdf}
-              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-colors"
-              title="Salvar diretamente o arquivo PDF no seu computador"
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-colors cursor-pointer"
+              title={`Salvar diretamente o relatório em PDF (${reportOrientation === 'landscape' ? 'Paisagem' : 'Retrato'})`}
             >
               <Download className="w-3.5 h-3.5" />
               <span>{isGeneratingPdf ? 'Gerando PDF...' : 'Salvar PDF'}</span>
@@ -937,19 +892,45 @@ export const ReportsView: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2">
+                {/* Orientation Selector in Modal */}
+                <div className="flex items-center bg-slate-800 rounded-lg p-0.5 border border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => setReportOrientation('landscape')}
+                    className={`px-2 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                      reportOrientation === 'landscape'
+                        ? 'bg-blue-600 text-white shadow-xs font-bold'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    Paisagem
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReportOrientation('portrait')}
+                    className={`px-2 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                      reportOrientation === 'portrait'
+                        ? 'bg-blue-600 text-white shadow-xs font-bold'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    Retrato
+                  </button>
+                </div>
+
                 <button
                   type="button"
                   onClick={handleSaveReportPdf}
                   disabled={isGeneratingPdf}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span>{isGeneratingPdf ? 'Gerando PDF...' : 'Salvar PDF'}</span>
+                  <span>{isGeneratingPdf ? 'Gerando...' : 'Salvar PDF'}</span>
                 </button>
                 <button
                   type="button"
                   onClick={handlePrint}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold rounded-lg shadow-xs transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer"
                 >
                   <Printer className="w-3.5 h-3.5 text-slate-400" />
                   <span>Imprimir</span>
@@ -957,7 +938,7 @@ export const ReportsView: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleExportXLSX}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer"
                 >
                   <FileSpreadsheet className="w-3.5 h-3.5" />
                   <span>Baixar Excel (.xlsx)</span>
@@ -965,7 +946,7 @@ export const ReportsView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsPreviewModalOpen(false)}
-                  className="flex items-center gap-1 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg text-xs font-semibold ml-1 border border-slate-700"
+                  className="flex items-center gap-1 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg text-xs font-semibold ml-1 border border-slate-700 cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                   <span>Fechar</span>
@@ -974,10 +955,10 @@ export const ReportsView: React.FC = () => {
             </div>
 
             {/* Preview Sheet Body */}
-            <div className="p-6 overflow-y-auto bg-slate-100">
-              <div className="bg-white p-6 rounded-xl shadow-xs border border-slate-200 space-y-3 max-w-5xl mx-auto">
+            <div className="p-6 overflow-y-auto bg-slate-100 flex-1">
+              <div className={`bg-white p-6 rounded-xl shadow-md border border-slate-200 space-y-3 mx-auto transition-all ${reportOrientation === 'landscape' ? 'max-w-6xl' : 'max-w-4xl'}`}>
                 {/* Synthetic Header */}
-                <div className="border-b border-slate-700 pb-3 flex items-center justify-between gap-4">
+                <div className="border-b-2 border-slate-900 pb-3 flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
                     <img src={LOGO_BASE64} alt="Brasão Oficial" className="h-10 w-auto object-contain" />
                     <div>
@@ -1003,25 +984,43 @@ export const ReportsView: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Synthetic Summary Ribbon */}
-                <div className="flex items-center justify-between flex-wrap gap-2 bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-[11px]">
-                  <div className="text-slate-600">
-                    <strong className="text-slate-800">Filtros:</strong>{' '}
-                    {selectedUnit !== 'ALL' && `Unidade: ${units.find((u) => u.id === selectedUnit)?.name || selectedUnit} · `}
-                    {selectedStatus !== 'ALL' && `Status: ${selectedStatus} · `}
-                    {selectedProcedure !== 'ALL' && `Procedimento: ${procedures.find((p) => p.id === selectedProcedure)?.name || selectedProcedure} · `}
-                    {selectedCity !== 'ALL' && `Município: ${selectedCity} · `}
-                    {selectedUrgency !== 'ALL' && `Prioridade: ${selectedUrgency === 'urgent' ? 'Urgentes' : 'Eletivos'} · `}
-                    {startDate || endDate ? `Período: ${startDate || 'início'} até ${endDate || 'atual'}` : 'Geral'}
+                {/* Structured KPI Strip in Preview */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-xs">
+                  <div className="bg-slate-50 border border-slate-200 border-l-4 border-l-slate-900 rounded-lg p-2 text-center">
+                    <div className="text-[10px] font-bold text-slate-500 uppercase">Total</div>
+                    <div className="text-sm font-black text-slate-900">{summary.total}</div>
                   </div>
-                  <div className="flex items-center gap-1.5 flex-wrap font-medium">
-                    <span className="px-2 py-0.5 rounded border border-slate-300 bg-white text-slate-800">Total: <strong>{summary.total}</strong></span>
-                    <span className="px-2 py-0.5 rounded border border-sky-300 bg-sky-50 text-sky-800">Agendados: <strong>{summary.agendados}</strong></span>
-                    <span className="px-2 py-0.5 rounded border border-emerald-300 bg-emerald-50 text-emerald-800">Regulados: <strong>{summary.regulados}</strong></span>
-                    <span className="px-2 py-0.5 rounded border border-amber-300 bg-amber-50 text-amber-800">Micrologos: <strong>{summary.micrologos}</strong></span>
-                    <span className="px-2 py-0.5 rounded border border-rose-200 bg-rose-50 text-rose-700">Sem Contato: <strong>{summary.semInteracao}</strong></span>
-                    <span className="px-2 py-0.5 rounded border border-rose-300 bg-rose-100 text-rose-900">Urgentes: <strong>{summary.urgentes}</strong></span>
+                  <div className="bg-sky-50 border border-sky-200 border-l-4 border-l-sky-600 rounded-lg p-2 text-center">
+                    <div className="text-[10px] font-bold text-sky-700 uppercase">Agendados</div>
+                    <div className="text-sm font-black text-sky-700">{summary.agendados}</div>
                   </div>
+                  <div className="bg-emerald-50 border border-emerald-200 border-l-4 border-l-emerald-600 rounded-lg p-2 text-center">
+                    <div className="text-[10px] font-bold text-emerald-700 uppercase">Regulados</div>
+                    <div className="text-sm font-black text-emerald-700">{summary.regulados}</div>
+                  </div>
+                  <div className="bg-amber-50 border border-amber-200 border-l-4 border-l-amber-600 rounded-lg p-2 text-center">
+                    <div className="text-[10px] font-bold text-amber-700 uppercase">Micrologos</div>
+                    <div className="text-sm font-black text-amber-700">{summary.micrologos}</div>
+                  </div>
+                  <div className="bg-rose-50 border border-rose-200 border-l-4 border-l-rose-600 rounded-lg p-2 text-center">
+                    <div className="text-[10px] font-bold text-rose-700 uppercase">Sem Contato</div>
+                    <div className="text-sm font-black text-rose-700">{summary.semInteracao}</div>
+                  </div>
+                  <div className="bg-red-50 border border-red-200 border-l-4 border-l-red-600 rounded-lg p-2 text-center">
+                    <div className="text-[10px] font-bold text-red-700 uppercase">Urgentes</div>
+                    <div className="text-sm font-black text-red-700">{summary.urgentes}</div>
+                  </div>
+                </div>
+
+                {/* Filter Description Banner in Preview */}
+                <div className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-[11px] text-slate-700">
+                  <strong className="text-slate-900">FILTROS APLICADOS:</strong>{' '}
+                  {selectedUnit !== 'ALL' && `Unidade: ${units.find((u) => u.id === selectedUnit)?.name || selectedUnit} · `}
+                  {selectedStatus !== 'ALL' && `Status: ${selectedStatus} · `}
+                  {selectedProcedure !== 'ALL' && `Procedimento: ${procedures.find((p) => p.id === selectedProcedure)?.name || selectedProcedure} · `}
+                  {selectedCity !== 'ALL' && `Município: ${selectedCity} · `}
+                  {selectedUrgency !== 'ALL' && `Prioridade: ${selectedUrgency === 'urgent' ? 'Urgentes' : 'Eletivos'} · `}
+                  {startDate || endDate ? `Período: ${startDate || 'início'} até ${endDate || 'atual'}` : 'Geral (sem restrições)'}
                 </div>
 
                 {/* Table */}

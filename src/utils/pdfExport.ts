@@ -1,18 +1,37 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
+export interface PdfExportOptions {
+  orientation?: 'portrait' | 'landscape';
+}
+
 /**
  * Robustly renders an HTML document string to a downloadable A4 PDF using jsPDF + html2canvas.
  * Uses an off-screen iframe to guarantee full CSS parsing, styles, images, and fonts without blank pages.
  */
-export async function exportHtmlToPdf(htmlContent: string, filename: string): Promise<void> {
+export async function exportHtmlToPdf(
+  htmlContent: string,
+  filename: string,
+  options?: PdfExportOptions
+): Promise<void> {
+  // Determine orientation: explicit option or detected from HTML
+  const isLandscape =
+    options?.orientation === 'landscape' ||
+    (!options?.orientation && (htmlContent.includes('size: A4 landscape') || htmlContent.includes('landscape')));
+
+  // Standard A4 dimensions at 96 DPI
+  // Portrait: 794px x 1123px (210mm x 297mm)
+  // Landscape: 1123px x 794px (297mm x 210mm)
+  const iframeWidth = isLandscape ? 1123 : 794;
+  const iframeMinHeight = isLandscape ? 794 : 1123;
+
   // 1. Create a hidden iframe
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed';
   iframe.style.left = '0';
   iframe.style.top = '0';
-  iframe.style.width = '794px'; // 210mm at 96 DPI
-  iframe.style.height = '1123px'; // 297mm at 96 DPI
+  iframe.style.width = `${iframeWidth}px`;
+  iframe.style.height = `${iframeMinHeight}px`;
   iframe.style.zIndex = '-9999';
   iframe.style.opacity = '0.01'; // Small opacity so browser renders layout & styles
   iframe.style.pointerEvents = 'none';
@@ -57,7 +76,7 @@ export async function exportHtmlToPdf(htmlContent: string, filename: string): Pr
       doc.body.scrollHeight,
       doc.body.offsetHeight,
       doc.documentElement.scrollHeight,
-      1123
+      iframeMinHeight
     );
     iframe.style.height = `${contentFullHeight}px`;
 
@@ -71,37 +90,60 @@ export async function exportHtmlToPdf(htmlContent: string, filename: string): Pr
       logging: false,
       scrollX: 0,
       scrollY: 0,
-      windowWidth: 794,
+      windowWidth: iframeWidth,
       windowHeight: contentFullHeight,
       height: contentFullHeight,
     });
 
     // 5. Build PDF with jsPDF
     const pdf = new jsPDF({
-      orientation: 'portrait',
+      orientation: isLandscape ? 'landscape' : 'portrait',
       unit: 'mm',
       format: 'a4',
       compress: true,
     });
 
-    const pdfPageWidth = 210;
-    const pdfPageHeight = 297;
-    const margin = 6; // 6mm margin
-    const printableWidth = pdfPageWidth - margin * 2; // 198mm
-    const printableHeight = pdfPageHeight - margin * 2; // 285mm
-    const contentHeight = (canvas.height * printableWidth) / canvas.width;
+    const pdfPageWidth = isLandscape ? 297 : 210;
+    const pdfPageHeight = isLandscape ? 210 : 297;
+    const margin = 8; // 8mm margin
+    const printableWidth = pdfPageWidth - margin * 2;
+    const printableHeight = pdfPageHeight - margin * 2;
 
-    const imgData = canvas.toDataURL('image/jpeg', 0.98);
+    // Slicing canvas per page for crystal clear pagination without clipping
+    const pageCanvasHeight = Math.floor((printableHeight * canvas.width) / printableWidth);
+    const totalPages = Math.max(1, Math.ceil(canvas.height / pageCanvasHeight));
 
-    // Multi-page pagination
-    const pageCount = Math.max(1, Math.ceil(contentHeight / printableHeight));
-
-    for (let i = 0; i < pageCount; i++) {
+    for (let i = 0; i < totalPages; i++) {
       if (i > 0) {
         pdf.addPage();
       }
-      const position = margin - i * printableHeight;
-      pdf.addImage(imgData, 'JPEG', margin, position, printableWidth, contentHeight);
+      const sY = i * pageCanvasHeight;
+      const sHeight = Math.min(pageCanvasHeight, canvas.height - sY);
+
+      // Create high-res canvas slice for this page
+      const pageCanvas = document.createElement('canvas');
+      pageCanvas.width = canvas.width;
+      pageCanvas.height = Math.max(sHeight, 1);
+      const ctx = pageCanvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+        ctx.drawImage(
+          canvas,
+          0,
+          sY,
+          canvas.width,
+          sHeight,
+          0,
+          0,
+          canvas.width,
+          sHeight
+        );
+      }
+
+      const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.98);
+      const renderHeight = (sHeight * printableWidth) / canvas.width;
+      pdf.addImage(pageImgData, 'JPEG', margin, margin, printableWidth, renderHeight);
     }
 
     // 6. Save PDF directly to user's device
