@@ -26,9 +26,6 @@ import { AppLogo } from '../common/AppLogo';
 import { getStatusStyle } from '../../utils/statusColors';
 import { LOGO_BASE64 } from '../../assets/logo';
 
-const URG_BADGE_BASE64 =
-  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADgAAAAYCAYAAACvKj4oAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAJnSURBVFhH5Zg/SyNBGMZTWt4HsLC0vNYqENZVYrIZsAn4Bc7CUluRfIDAIRZ2gtjYpEkhghYnyNmkUFCLcCiI3IVkZ4/17+rN8Sy8cfbd/Ll4nut4Cw/JvPPs7vvbmXmX2VTqfzuamUxRCrHj5vMN17KUEcrnG1KI/aZlfeI87cNNpz/A5M/Pe3eVinqo1dSv83MjhFzvqlXlLy1dyULh2J2YGOF8KcDdbm7GTjZN97u7Sgpx9i2dHmrDtbLZOX9x8Sc3myp/efnGE+JzZPQwxNzYTcHJiZLb2+qGTWN/by+Mo1/3cVF/J+Gaf+LrpeDgQMlc7qIN6E5OXj8OcDHcfGt4WJ2Vy5F4bWYmjKNf930ZGwv7oK/ZbBj7vrERORcPh87XfacLC88CRfF5ArSsmKGXBgXkPkpeH2m0Eddh8BBwzYvV1VgO/ZQoINq6r14qRdovoUQBMe0Qx7REm0aU3+dv9KqAAMJ/CNMOMXjpPLR1QF6c6EEMon8KyH1UZAiErykOSAVHLzo8h356VUDyAQxtXkyOZmfDeKdqmQggVT0kpsf5WuKAED0EFJZePggjmQggRJUPSSFBqox6kp0Sx4scMYjWKkSFh65HazUxQAhJYBSRAH67vbx5nN5v+ihCAAMorT/0w9tp6vbTiwC+ZUUBbTt4rNdjJMVAcQeCtsMbjJVD4eHSk5NeU+AuVz5amUl4EZThX2tFKLaBsTmUDrOpUm7+G7CUvOmp93Yrt4dH/8ohfhxvbZ2P8jW6a0IYPjU4hWLzZbjOBE4OvBdxisU1rE/xCI1SrYd4GNZw7ZHOde7Pn4DjyydWq7T4CUAAAAASUVORK5CYII=';
-
 export const ReportsView: React.FC = () => {
   const { patients, units, procedures, doctors, municipalities } = useApp();
   const { allowedUnits, currentUser, hasPermission } = useAuth();
@@ -225,7 +222,7 @@ export const ReportsView: React.FC = () => {
           <td style="padding: 5px 6px; font-weight: 700; color: #0f172a; font-size: 10px; border-right: 1px solid #e2e8f0; vertical-align: middle;">
             <span>${p.name}</span>
             <span style="font-weight: normal; color: #64748b; font-size: 8.5px; margin-left: 2px;">(${age !== null ? `${age}a` : '-'})</span>
-            ${p.isUrgent ? `<img src="${URG_BADGE_BASE64}" alt="URG" style="height: 12px; width: 28px; vertical-align: middle; margin-left: 4px; display: inline-block;" />` : ''}
+            ${p.isUrgent ? '<span style="background-color: #fee2e2; color: #b91c1c; font-weight: 900; font-size: 8px; padding: 1.5px 5px; border-radius: 3px; margin-left: 4px; display: inline-block; vertical-align: middle; line-height: 1.2;">URG</span>' : ''}
           </td>
           <td style="padding: 5px 6px; font-size: 8.5px; line-height: 1.25; color: #1e293b; border-right: 1px solid #e2e8f0;">
             ${procNames}
@@ -1106,11 +1103,9 @@ export const ReportsView: React.FC = () => {
                                 ({age !== null ? `${age}a` : '-'})
                               </span>
                               {p.isUrgent && (
-                                <img
-                                  src={URG_BADGE_BASE64}
-                                  alt="URG"
-                                  className="h-3 w-7 inline-block align-middle ml-1.5"
-                                />
+                                <span className="inline-flex items-center justify-center align-middle ml-1.5 px-1.5 py-0.5 bg-rose-100 text-rose-700 font-black rounded text-[8.5px] leading-none">
+                                  URG
+                                </span>
                               )}
                             </td>
                             <td className="p-2 text-slate-700">{procNames}</td>

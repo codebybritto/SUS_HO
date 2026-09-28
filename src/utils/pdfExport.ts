@@ -48,27 +48,31 @@ export async function exportHtmlToPdf(
     doc.close();
 
     // 3. Wait for layout, styles and fonts to settle
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await new Promise((resolve) => setTimeout(resolve, 250));
 
-    // Wait for images (like the shield logo) to complete loading
+    // Wait for images (like the shield logo) with guaranteed safety timeout (max 1000ms total)
     const images = Array.from(doc.images);
     if (images.length > 0) {
-      await Promise.all(
-        images.map(
-          (img) =>
-            new Promise<void>((resolve) => {
-              if (img.complete && img.naturalHeight !== 0) {
-                resolve();
-              } else {
-                img.onload = () => resolve();
-                img.onerror = () => resolve();
-              }
-            })
-        )
-      );
+      await Promise.race([
+        Promise.all(
+          images.map(
+            (img) =>
+              new Promise<void>((resolve) => {
+                if (img.complete) {
+                  resolve();
+                } else {
+                  const timer = setTimeout(resolve, 800);
+                  img.onload = () => { clearTimeout(timer); resolve(); };
+                  img.onerror = () => { clearTimeout(timer); resolve(); };
+                }
+              })
+          )
+        ),
+        new Promise<void>((resolve) => setTimeout(resolve, 1000)),
+      ]);
     }
 
-    // Small delay after images load to ensure full rasterization
+    // Small delay after images to ensure full rasterization
     await new Promise((resolve) => setTimeout(resolve, 150));
 
     // Expand iframe to full content height to avoid any clipping
