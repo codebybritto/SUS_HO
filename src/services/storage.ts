@@ -11,17 +11,17 @@ import {
 } from '../types';
 
 const STORAGE_KEYS = {
-  USERS: 'micrologos_users_rj_v4',
-  UNITS: 'micrologos_units_rj_v4',
-  MUNICIPALITIES: 'micrologos_municipalities_rj_v4',
-  PROCEDURES: 'micrologos_procedures_rj_v4',
-  DOCTORS: 'micrologos_doctors_rj_v4',
-  PATIENTS: 'micrologos_patients_rj_v4',
-  AUDIT_LOGS: 'micrologos_audit_logs_rj_v4',
-  SETTINGS: 'micrologos_settings_rj_v4',
-  CURRENT_USER: 'micrologos_current_user_rj_v4',
-  ACTIVE_UNIT: 'micrologos_active_unit_rj_v4',
-  CUSTOM_LOGO: 'micrologos_custom_logo_v4',
+  USERS: 'micrologos_users_rj_v5',
+  UNITS: 'micrologos_units_rj_v5',
+  MUNICIPALITIES: 'micrologos_municipalities_rj_v5',
+  PROCEDURES: 'micrologos_procedures_rj_v5',
+  DOCTORS: 'micrologos_doctors_rj_v5',
+  PATIENTS: 'micrologos_patients_rj_v5',
+  AUDIT_LOGS: 'micrologos_audit_logs_rj_v5',
+  SETTINGS: 'micrologos_settings_rj_v5',
+  CURRENT_USER: 'micrologos_current_user_rj_v5',
+  ACTIVE_UNIT: 'micrologos_active_unit_rj_v5',
+  CUSTOM_LOGO: 'micrologos_custom_logo_v5',
 };
 
 export const DEFAULT_SETTINGS: SystemSettings = {
