@@ -75,14 +75,15 @@ const MainAppContent: React.FC = () => {
       }
     };
 
-    const handleQuickLogin = async (userLogin: string) => {
+    const handleQuickLogin = async (userLogin: string, userPass?: string) => {
+      const pass = userPass || '123';
       setLoginInput(userLogin);
-      setPasswordInput('123');
+      setPasswordInput(pass);
       setLoginError('');
       clearSessionExpiredMessage();
       setIsLoggingIn(true);
       try {
-        await login(userLogin, '123');
+        await login(userLogin, pass);
       } finally {
         setIsLoggingIn(false);
       }
@@ -191,7 +192,7 @@ const MainAppContent: React.FC = () => {
                       key={u.id}
                       type="button"
                       disabled={isLoggingIn}
-                      onClick={() => handleQuickLogin(u.login)}
+                      onClick={() => handleQuickLogin(u.login, u.password)}
                       className={`w-full text-left p-2.5 rounded-xl border transition-all flex items-center justify-between group disabled:opacity-50 ${
                         isAdmin
                           ? 'border-blue-300 bg-blue-50/60 hover:border-blue-500 hover:bg-blue-50'
@@ -210,7 +211,7 @@ const MainAppContent: React.FC = () => {
                         <div className="text-[10px] text-slate-500 flex items-center gap-2 mt-0.5">
                           <span>Login: <code className="font-mono font-bold text-slate-700">{u.login}</code></span>
                           <span>•</span>
-                          <span>Senha: <code className="font-mono font-bold text-slate-700">123</code></span>
+                          <span>Senha: <code className="font-mono font-bold text-slate-700">{u.password || '123'}</code></span>
                         </div>
                       </div>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition-colors ${
@@ -273,9 +274,9 @@ const MainAppContent: React.FC = () => {
                   </ul>
                 </div>
 
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-[11px]">
-                  <span className="font-bold block mb-1">Ambiente de Demonstração / Testes:</span>
-                  Para contas de teste, a senha padrão é <code className="font-mono font-bold bg-white px-1.5 py-0.5 rounded border border-amber-300">123</code> para os operadores e <code className="font-mono font-bold bg-white px-1.5 py-0.5 rounded border border-amber-300">admin</code> para a conta Administrador.
+                <div className="p-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-800 text-[11px]">
+                  <span className="font-bold block mb-1">Acesso Administrativo Oficial:</span>
+                  O administrador principal (<code className="font-mono font-bold text-blue-700">igor.britto</code>) ou o Administrador Geral podem redefinir senhas e gerenciar novos operadores diretamente na aba Administração.
                 </div>
               </div>
 

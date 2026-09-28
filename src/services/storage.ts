@@ -212,6 +212,37 @@ export const INITIAL_DOCTORS: Doctor[] = [
 
 export const INITIAL_USERS: User[] = [
   {
+    id: 'user-igor-britto',
+    name: 'Igor Britto',
+    login: 'igor.britto',
+    password: 'ho2026@',
+    role: 'admin',
+    active: true,
+    unitIds: ['unit-1', 'unit-2', 'unit-3', 'unit-4'],
+    permissions: {
+      view_patients: true,
+      create_patients: true,
+      edit_patients: true,
+      delete_patients: true,
+      edit_after_creation: true,
+      record_evolution: true,
+      record_contact_attempt: true,
+      change_patient_status: true,
+      manage_procedures: true,
+      manage_doctors: true,
+      manage_municipalities: true,
+      view_timeline: true,
+      view_logs: true,
+      view_reports: true,
+      export_reports: true,
+      manage_users: true,
+      manage_units: true,
+      manage_settings: true,
+    },
+    email: 'igor.britto@gestao.saude.rj.gov.br',
+    createdAt: '2026-09-28T13:41:00.000Z',
+  },
+  {
     id: 'user-admin',
     name: 'Administrador Geral',
     login: 'admin',
@@ -1048,12 +1079,12 @@ export const storageService = {
         const list = JSON.parse(data) as Patient[];
         return list.map((p) => ({
           ...p,
-          isSimulation: p.isSimulation !== undefined ? p.isSimulation : true,
+          isSimulation: false,
         }));
       }
-      return INITIAL_PATIENTS.map((p) => ({ ...p, isSimulation: true }));
+      return [];
     } catch {
-      return INITIAL_PATIENTS.map((p) => ({ ...p, isSimulation: true }));
+      return [];
     }
   },
 

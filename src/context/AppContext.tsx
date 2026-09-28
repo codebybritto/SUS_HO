@@ -101,14 +101,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     isSupabaseConfigured() ? 'syncing' : 'unconfigured'
   );
 
-  const [databaseMode, setDatabaseModeState] = useState<'real' | 'simulation'>(() => {
-    try {
-      const saved = localStorage.getItem('micrologos_database_mode_v4');
-      return saved === 'real' || saved === 'simulation' ? saved : 'simulation';
-    } catch {
-      return 'simulation';
-    }
-  });
+  const [databaseMode, setDatabaseModeState] = useState<'real' | 'simulation'>('real');
 
   const setDatabaseMode = (mode: 'real' | 'simulation') => {
     setDatabaseModeState(mode);
@@ -241,11 +234,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       if (supaUsers && supaUsers.length > 0) {
         setUsers(supaUsers);
+        storageService.saveUsers(supaUsers);
         hasSupabaseData = true;
       }
-      if (supaPatients && supaPatients.length > 0) {
+      if (supaPatients !== null) {
         setPatients(supaPatients);
-        hasSupabaseData = true;
+        storageService.savePatients(supaPatients);
+        if (supaPatients.length > 0) {
+          hasSupabaseData = true;
+        }
       }
       if (supaLogs && supaLogs.length > 0) {
         setAuditLogs(supaLogs);
