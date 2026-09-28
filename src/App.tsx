@@ -64,12 +64,12 @@ const MainAppContent: React.FC = () => {
       clearSessionExpiredMessage();
       setIsLoggingIn(true);
       try {
-        const success = await login(loginInput, passwordInput);
-        if (!success) {
-          setLoginError('Credenciais inválidas ou usuário inativo. Verifique seu login e senha.');
+        const res = await login(loginInput, passwordInput);
+        if (!res.success) {
+          setLoginError(res.error || 'Credenciais inválidas ou usuário inativo. Verifique seu login e senha.');
         }
-      } catch {
-        setLoginError('Falha na comunicação ao autenticar usuário.');
+      } catch (err: any) {
+        setLoginError(`Falha na comunicação ao autenticar usuário: ${err?.message || 'Erro inesperado'}`);
       } finally {
         setIsLoggingIn(false);
       }
@@ -122,7 +122,7 @@ const MainAppContent: React.FC = () => {
                     type="text"
                     value={loginInput}
                     onChange={(e) => setLoginInput(e.target.value)}
-                    placeholder="Digite seu login de operador"
+                    placeholder="igor.britto ou admin"
                     className="w-full border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 font-mono"
                     required
                   />

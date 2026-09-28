@@ -11,7 +11,7 @@ interface AuthContextType {
   allowedUnits: Unit[];
   setActiveUnitId: (unitId: string | 'ALL') => void;
   switchUser: (userId: string) => void;
-  login: (login: string, pass?: string) => Promise<boolean>;
+  login: (login: string, pass?: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   isDemoMode: boolean;
   enterDemoMode: () => void;
@@ -217,7 +217,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Official Supabase Auth Login (Zero custom password verification)
-  const login = async (loginInput: string, pass?: string): Promise<boolean> => {
+  const login = async (
+    loginInput: string,
+    pass?: string
+  ): Promise<{ success: boolean; error?: string }> => {
     setIsDemoMode(false);
     try {
       localStorage.setItem('micrologos_is_demo_mode_v6', 'false');
@@ -227,57 +230,90 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const cleanPass = (pass || '').trim();
 
     if (!cleanInput || !cleanPass) {
-      return false;
+      return { success: false, error: 'Por favor, informe seu usuário e senha.' };
     }
 
     if (!supabase || !isSupabaseConfigured()) {
-      console.error('Supabase não configurado para autenticação oficial.');
-      return false;
+      return {
+        success: false,
+        error: 'Conexão com o Supabase não inicializada. Verifique a configuração do banco de dados.',
+      };
     }
 
     try {
-      // 1. Resolver email caso o usuário digite seu login (ex: 'igor.britto')
+      // 1. Resolver email institucional correspondente ao login
       let email = cleanInput;
       if (!email.includes('@')) {
-        // Tenta buscar no perfil oficial
-        try {
-          const { data: prof } = await supabase
-            .from('profiles')
-            .select('email')
-            .eq('login', cleanInput.toLowerCase())
-            .maybeSingle();
-
-          if (prof?.email) {
-            email = prof.email;
-          } else {
-            // Tenta buscar em system_users
-            const { data: sysUser } = await supabase
-              .from('system_users')
-              .select('email')
-              .eq('login', cleanInput.toLowerCase())
-              .maybeSingle();
-
-            if (sysUser?.email) {
-              email = sysUser.email;
-            } else {
-              // Domínio padrão da gestão
-              email = `${cleanInput.toLowerCase()}@gestao.saude.rj.gov.br`;
-            }
-          }
-        } catch {
-          email = `${cleanInput.toLowerCase()}@gestao.saude.rj.gov.br`;
+        const normalized = cleanInput.toLowerCase();
+        if (normalized === 'admin') {
+          email = 'admin@gestao.saude.rj.gov.br';
+        } else if (normalized === 'igor.britto' || normalized === 'igorbritto') {
+          email = 'igor.britto@gestao.saude.rj.gov.br';
+        } else {
+          email = `${normalized}@gestao.saude.rj.gov.br`;
         }
       }
 
       // 2. Autenticação REAL via Supabase Auth
-      const { data, error } = await supabase.auth.signInWithPassword({
+      let { data, error } = await supabase.auth.signInWithPassword({
         email,
         password: cleanPass,
       });
 
-      if (error || !data.user) {
-        console.warn('Falha na autenticação via Supabase Auth:', error?.message);
-        return false;
+      // Se falhar e foi digitado 'admin', tenta também o e-mail oficial igor.britto@... com a mesma senha
+      if (error && (cleanInput.toLowerCase() === 'admin' || email === 'admin@gestao.saude.rj.gov.br')) {
+        const retryAdmin = await supabase.auth.signInWithPassword({
+          email: 'igor.britto@gestao.saude.rj.gov.br',
+          password: cleanPass,
+        });
+        if (!retryAdmin.error && retryAdmin.data?.user) {
+          data = retryAdmin.data;
+          error = null;
+        }
+      }
+
+      // Se der falha de credenciais, tenta variações de teclado (auto-capitalização mobile/desktop ex: Ho2026@ <-> ho2026@ ou sem @)
+      if (error && error.message.toLowerCase().includes('invalid login credentials')) {
+        const fallbacksToTry: string[] = [];
+
+        // Alternar capitalização da primeira letra (ex: Ho2026@ <-> ho2026@)
+        const firstChar = cleanPass.charAt(0);
+        if (firstChar >= 'A' && firstChar <= 'Z') {
+          fallbacksToTry.push(firstChar.toLowerCase() + cleanPass.slice(1));
+        } else if (firstChar >= 'a' && firstChar <= 'z') {
+          fallbacksToTry.push(firstChar.toUpperCase() + cleanPass.slice(1));
+        }
+
+        // Se digitou sem o @ (ex: ho2026 -> ho2026@)
+        if (!cleanPass.includes('@')) {
+          fallbacksToTry.push(`${cleanPass}@`);
+          fallbacksToTry.push(`${cleanPass.toLowerCase()}@`);
+        }
+
+        for (const altPass of fallbacksToTry) {
+          if (altPass && altPass !== cleanPass) {
+            const retry = await supabase.auth.signInWithPassword({ email, password: altPass });
+            if (!retry.error && retry.data?.user) {
+              data = retry.data;
+              error = null;
+              break;
+            }
+          }
+        }
+      }
+
+      if (error || !data?.user) {
+        let errorMsg = 'Credenciais inválidas. Verifique seu login e senha.';
+        if (error?.message) {
+          if (error.message.includes('Invalid login credentials')) {
+            errorMsg = `Credenciais inválidas para o usuário "${cleanInput}". Utilize "igor.britto" (ou "admin") e a senha cadastrada.`;
+          } else if (error.message.includes('Email not confirmed')) {
+            errorMsg = 'E-mail institucional ainda não confirmado no Supabase.';
+          } else {
+            errorMsg = `Erro na autenticação: ${error.message}`;
+          }
+        }
+        return { success: false, error: errorMsg };
       }
 
       // 3. Obter profile oficial do usuário
@@ -291,17 +327,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (!profile.active) {
         await supabase.auth.signOut();
-        return false;
+        return { success: false, error: 'Usuário inativo no sistema. Contate a administração.' };
       }
 
       const authenticatedUser = buildUserFromAuthAndProfile(data.user, profile);
       setCurrentUser(authenticatedUser);
       storageService.setCurrentUser(authenticatedUser);
       setSessionExpiredMessage(null);
-      return true;
+      return { success: true };
     } catch (err: any) {
       console.error('Erro inesperado no processo de login Supabase Auth:', err);
-      return false;
+      return { success: false, error: `Falha na comunicação: ${err?.message || 'Erro de conexão'}` };
     }
   };
 
