@@ -197,8 +197,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearchSelectPatient }) => {
                             <div className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
                               <span>{p.name}</span>
                               {p.isUrgent && (
-                                <span className="text-[9px] bg-rose-100 text-rose-700 px-1.5 py-0.2 rounded font-black border border-rose-200">
-                                  URG
+                                <span className="text-[9.5px] text-rose-600 font-black uppercase">
+                                  [URG]
                                 </span>
                               )}
                             </div>

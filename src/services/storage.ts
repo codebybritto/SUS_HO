@@ -213,7 +213,7 @@ export const INITIAL_DOCTORS: Doctor[] = [
 export const INITIAL_USERS: User[] = [
   {
     id: 'user-admin',
-    name: 'Dr. Renato Silveira (Coordenação Geral RJ)',
+    name: 'Administrador Geral',
     login: 'admin',
     password: '123',
     role: 'admin',

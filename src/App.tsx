@@ -47,6 +47,7 @@ const MainAppContent: React.FC = () => {
   const [loginInput, setLoginInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] = useState(false);
 
   // Find active selected patient object dynamically from state
@@ -57,22 +58,34 @@ const MainAppContent: React.FC = () => {
 
   // If user is not authenticated, show the Login Screen
   if (!currentUser) {
-    const handleLoginSubmit = (e: React.FormEvent) => {
+    const handleLoginSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       setLoginError('');
       clearSessionExpiredMessage();
-      const success = login(loginInput, passwordInput);
-      if (!success) {
-        setLoginError('Credenciais inválidas ou usuário inativo. Utilize uma das contas de demonstração abaixo.');
+      setIsLoggingIn(true);
+      try {
+        const success = await login(loginInput, passwordInput);
+        if (!success) {
+          setLoginError('Credenciais inválidas ou usuário inativo. Utilize a conta de Administrador (admin) ou outro perfil cadastrado.');
+        }
+      } catch {
+        setLoginError('Falha na comunicação ao autenticar usuário.');
+      } finally {
+        setIsLoggingIn(false);
       }
     };
 
-    const handleQuickLogin = (userLogin: string) => {
+    const handleQuickLogin = async (userLogin: string) => {
       setLoginInput(userLogin);
       setPasswordInput('123');
       setLoginError('');
       clearSessionExpiredMessage();
-      login(userLogin, '123');
+      setIsLoggingIn(true);
+      try {
+        await login(userLogin, '123');
+      } finally {
+        setIsLoggingIn(false);
+      }
     };
 
     return (
@@ -157,41 +170,59 @@ const MainAppContent: React.FC = () => {
 
               <button
                 type="submit"
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                disabled={isLoggingIn}
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
               >
-                <span>Acessar o Sistema</span>
+                <span>{isLoggingIn ? 'Autenticando...' : 'Acessar o Sistema'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
 
-            {/* Demo Accounts Quick Login */}
+            {/* Quick Login Accounts */}
             <div className="pt-4 border-t border-slate-100">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2.5 text-center">
-                Perfis de Demonstração / Acesso Rápido:
+                Acesso Rápido / Selecionar Operador:
               </span>
               <div className="space-y-2">
-                {users.map((u) => (
-                  <button
-                    key={u.id}
-                    type="button"
-                    onClick={() => handleQuickLogin(u.login)}
-                    className="w-full text-left p-2.5 rounded-xl border border-slate-200 hover:border-slate-400 hover:bg-slate-50 transition-all flex items-center justify-between group"
-                  >
-                    <div>
-                      <div className="font-bold text-xs text-slate-800 group-hover:text-blue-900">
-                        {u.name}
+                {users.map((u) => {
+                  const isAdmin = u.role === 'admin';
+                  return (
+                    <button
+                      key={u.id}
+                      type="button"
+                      disabled={isLoggingIn}
+                      onClick={() => handleQuickLogin(u.login)}
+                      className={`w-full text-left p-2.5 rounded-xl border transition-all flex items-center justify-between group disabled:opacity-50 ${
+                        isAdmin
+                          ? 'border-blue-300 bg-blue-50/60 hover:border-blue-500 hover:bg-blue-50'
+                          : 'border-slate-200 hover:border-slate-400 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div>
+                        <div className="font-bold text-xs text-slate-800 group-hover:text-blue-900 flex items-center gap-1.5">
+                          <span>{u.name}</span>
+                          {isAdmin && (
+                            <span className="text-[9px] bg-blue-600 text-white px-1.5 py-0.2 rounded font-black uppercase tracking-wider">
+                              Admin
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-slate-500 flex items-center gap-2 mt-0.5">
+                          <span>Login: <code className="font-mono font-bold text-slate-700">{u.login}</code></span>
+                          <span>•</span>
+                          <span>Senha: <code className="font-mono font-bold text-slate-700">123</code></span>
+                        </div>
                       </div>
-                      <div className="text-[10px] text-slate-500 flex items-center gap-2 mt-0.5">
-                        <span>Login: <code className="font-mono font-bold text-slate-700">{u.login}</code></span>
-                        <span>•</span>
-                        <span>Perfil: {u.role.toUpperCase()}</span>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 group-hover:bg-slate-900 group-hover:text-white transition-colors">
-                      Entrar
-                    </span>
-                  </button>
-                ))}
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition-colors ${
+                        isAdmin
+                          ? 'bg-blue-600 text-white group-hover:bg-blue-700'
+                          : 'bg-slate-100 text-slate-600 group-hover:bg-slate-900 group-hover:text-white'
+                      }`}>
+                        Entrar
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>

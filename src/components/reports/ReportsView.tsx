@@ -223,12 +223,10 @@ export const ReportsView: React.FC = () => {
         return `
         <tr style="background-color: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'}; border-bottom: 1px solid #e2e8f0; page-break-inside: avoid;">
           <td style="padding: 5px 3px; font-size: 8.5px; text-align: center; color: #64748b; font-weight: 700; border-right: 1px solid #e2e8f0; vertical-align: middle;">${idx + 1}</td>
-          <td style="padding: ${isLand ? '5px 6px' : '4px 5px'}; border-right: 1px solid #e2e8f0; vertical-align: middle;">
-            <div style="font-weight: 700; color: #0f172a; font-size: ${isLand ? '9.5px' : '9px'}; line-height: 1.25;">
-              ${p.name}
-              <span style="font-weight: normal; color: #64748b; font-size: ${isLand ? '8.5px' : '8px'}; margin-left: 2px;">(${age !== null ? `${age}a` : '-'})</span>
-            </div>
-            ${p.isUrgent ? `<div style="margin-top: 2px;"><span style="display: inline-block; background-color: #fee2e2; color: #b91c1c; font-size: 7.5px; font-weight: 900; padding: 1px 4px; border-radius: 2px; text-transform: uppercase; line-height: 1.1;">Urgente</span></div>` : ''}
+          <td style="padding: ${isLand ? '5px 6px' : '4px 5px'}; border-right: 1px solid #e2e8f0; vertical-align: middle; line-height: 1.3;">
+            <span style="font-weight: 700; color: #0f172a; font-size: ${isLand ? '9.5px' : '9px'};">${p.name}</span>
+            <span style="font-weight: normal; color: #64748b; font-size: ${isLand ? '8.5px' : '8px'}; margin-left: 2px;">(${age !== null ? `${age}a` : '-'})</span>
+            ${p.isUrgent ? ` <span style="color: #dc2626; font-weight: 900; font-size: ${isLand ? '8.5px' : '8px'}; margin-left: 3px;">[URG]</span>` : ''}
           </td>
           <td style="padding: ${isLand ? '5px 6px' : '4px 5px'}; font-size: ${isLand ? '8.5px' : '8px'}; line-height: 1.25; color: #1e293b; border-right: 1px solid #e2e8f0;">
             ${procNames}
@@ -1103,19 +1101,15 @@ export const ReportsView: React.FC = () => {
                         return (
                           <tr key={p.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
                             <td className="p-2 text-center text-slate-500 font-bold text-[10px]">{idx + 1}</td>
-                            <td className="p-2 font-bold text-slate-900">
-                              <div className="leading-tight">
-                                {p.name}
-                                <span className="font-normal text-slate-500 text-[10px] ml-1">
-                                  ({age !== null ? `${age}a` : '-'})
-                                </span>
-                              </div>
+                            <td className="p-2 font-bold text-slate-900 leading-tight">
+                              <span>{p.name}</span>
+                              <span className="font-normal text-slate-500 text-[10px] ml-1">
+                                ({age !== null ? `${age}a` : '-'})
+                              </span>
                               {p.isUrgent && (
-                                <div className="mt-1">
-                                  <span className="inline-block bg-rose-100 text-rose-700 font-black rounded px-1.5 py-0.5 text-[8.5px] uppercase leading-none">
-                                    Urgente
-                                  </span>
-                                </div>
+                                <span className="text-rose-600 font-black text-[9.5px] ml-1.5 uppercase">
+                                  [URG]
+                                </span>
                               )}
                             </td>
                             <td className="p-2 text-slate-700">{procNames}</td>

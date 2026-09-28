@@ -11,7 +11,7 @@ interface AuthContextType {
   allowedUnits: Unit[];
   setActiveUnitId: (unitId: string | 'ALL') => void;
   switchUser: (userId: string) => void;
-  login: (login: string, pass?: string) => boolean;
+  login: (login: string, pass?: string) => Promise<boolean>;
   logout: () => void;
   sessionExpiredMessage: string | null;
   clearSessionExpiredMessage: () => void;
@@ -40,6 +40,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Refresh units in case updated
     setAllUnits(storageService.getUnits());
+
+    // Sync latest users from Supabase on mount
+    if (isSupabaseConfigured()) {
+      supabaseService.fetchUsers().then((supaUsers) => {
+        if (supaUsers && supaUsers.length > 0) {
+          storageService.saveUsers(supaUsers);
+        }
+      }).catch(console.warn);
+    }
   }, []);
 
   // Compute allowed units for current user
@@ -77,11 +86,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const login = (loginInput: string, pass?: string): boolean => {
-    const users = storageService.getUsers();
-    const user = users.find(
+  const login = async (loginInput: string, pass?: string): Promise<boolean> => {
+    let users = storageService.getUsers();
+    let user = users.find(
       (u) => u.login.toLowerCase() === loginInput.toLowerCase() && u.active
     );
+
+    // If user not found in local cache or credentials mismatch, fetch fresh users from Supabase!
+    if ((!user || (pass && user.password && user.password !== pass)) && isSupabaseConfigured()) {
+      try {
+        const supaUsers = await supabaseService.fetchUsers();
+        if (supaUsers && supaUsers.length > 0) {
+          storageService.saveUsers(supaUsers);
+          users = supaUsers;
+          user = users.find(
+            (u) => u.login.toLowerCase() === loginInput.toLowerCase() && u.active
+          );
+        }
+      } catch (err) {
+        console.warn('Erro ao consultar usuário no Supabase:', err);
+      }
+    }
+
     if (user) {
       if (pass && user.password && user.password !== pass) {
         return false;
