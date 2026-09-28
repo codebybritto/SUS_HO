@@ -20,11 +20,11 @@ import { RecordContactModal } from './components/patients/RecordContactModal';
 import { RecordAbsenceModal } from './components/patients/RecordAbsenceModal';
 import { Patient } from './types';
 import { AppLogo } from './components/common/AppLogo';
-import { Lock, User, ShieldCheck, ArrowRight, CheckCircle2, AlertCircle, KeyRound, HelpCircle, X, LogOut } from 'lucide-react';
+import { Lock, User, ShieldCheck, ArrowRight, CheckCircle2, AlertCircle, KeyRound, HelpCircle, X, LogOut, Sparkles } from 'lucide-react';
 
 const MainAppContent: React.FC = () => {
-  const { currentUser, login, sessionExpiredMessage, clearSessionExpiredMessage } = useAuth();
-  const { patients, users } = useApp();
+  const { currentUser, login, sessionExpiredMessage, clearSessionExpiredMessage, isDemoMode, enterDemoMode, exitDemoMode } = useAuth();
+  const { patients } = useApp();
 
   const [currentTab, setCurrentTab] = useState<MainTab>('dashboard');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
@@ -66,24 +66,10 @@ const MainAppContent: React.FC = () => {
       try {
         const success = await login(loginInput, passwordInput);
         if (!success) {
-          setLoginError('Credenciais inválidas ou usuário inativo. Utilize a conta de Administrador (admin) ou outro perfil cadastrado.');
+          setLoginError('Credenciais inválidas ou usuário inativo. Verifique seu login e senha.');
         }
       } catch {
         setLoginError('Falha na comunicação ao autenticar usuário.');
-      } finally {
-        setIsLoggingIn(false);
-      }
-    };
-
-    const handleQuickLogin = async (userLogin: string, userPass?: string) => {
-      const pass = userPass || '123';
-      setLoginInput(userLogin);
-      setPasswordInput(pass);
-      setLoginError('');
-      clearSessionExpiredMessage();
-      setIsLoggingIn(true);
-      try {
-        await login(userLogin, pass);
       } finally {
         setIsLoggingIn(false);
       }
@@ -136,7 +122,7 @@ const MainAppContent: React.FC = () => {
                     type="text"
                     value={loginInput}
                     onChange={(e) => setLoginInput(e.target.value)}
-                    placeholder="admin, patricia, carlos, mariana..."
+                    placeholder="Digite seu login de operador"
                     className="w-full border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 font-mono"
                     required
                   />
@@ -163,7 +149,7 @@ const MainAppContent: React.FC = () => {
                     type="password"
                     value={passwordInput}
                     onChange={(e) => setPasswordInput(e.target.value)}
-                    placeholder="Qualquer senha ou '123'"
+                    placeholder="••••••••"
                     className="w-full border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 font-mono"
                   />
                 </div>
@@ -179,52 +165,19 @@ const MainAppContent: React.FC = () => {
               </button>
             </form>
 
-            {/* Quick Login Accounts */}
-            <div className="pt-4 border-t border-slate-100">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2.5 text-center">
-                Acesso Rápido / Selecionar Operador:
-              </span>
-              <div className="space-y-2">
-                {users.map((u) => {
-                  const isAdmin = u.role === 'admin';
-                  return (
-                    <button
-                      key={u.id}
-                      type="button"
-                      disabled={isLoggingIn}
-                      onClick={() => handleQuickLogin(u.login, u.password)}
-                      className={`w-full text-left p-2.5 rounded-xl border transition-all flex items-center justify-between group disabled:opacity-50 ${
-                        isAdmin
-                          ? 'border-blue-300 bg-blue-50/60 hover:border-blue-500 hover:bg-blue-50'
-                          : 'border-slate-200 hover:border-slate-400 hover:bg-slate-50'
-                      }`}
-                    >
-                      <div>
-                        <div className="font-bold text-xs text-slate-800 group-hover:text-blue-900 flex items-center gap-1.5">
-                          <span>{u.name}</span>
-                          {isAdmin && (
-                            <span className="text-[9px] bg-blue-600 text-white px-1.5 py-0.2 rounded font-black uppercase tracking-wider">
-                              Admin
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[10px] text-slate-500 flex items-center gap-2 mt-0.5">
-                          <span>Login: <code className="font-mono font-bold text-slate-700">{u.login}</code></span>
-                          <span>•</span>
-                          <span>Senha: <code className="font-mono font-bold text-slate-700">{u.password || '123'}</code></span>
-                        </div>
-                      </div>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition-colors ${
-                        isAdmin
-                          ? 'bg-blue-600 text-white group-hover:bg-blue-700'
-                          : 'bg-slate-100 text-slate-600 group-hover:bg-slate-900 group-hover:text-white'
-                      }`}>
-                        Entrar
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+            {/* Modo Demonstração (Informações Fictícias) */}
+            <div className="pt-5 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={enterDemoMode}
+                className="w-full py-2.5 px-3 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs group"
+              >
+                <Sparkles className="w-4 h-4 text-amber-600 shrink-0 group-hover:rotate-12 transition-transform" />
+                <span>Acessar Modo Demonstração (Informações Fictícias)</span>
+              </button>
+              <p className="text-[10px] text-slate-400 text-center mt-2 leading-relaxed">
+                Ambiente de teste com dados e prontuários simulados. Nenhuma informação fictícia é gravada no banco de dados real.
+              </p>
             </div>
           </div>
         </div>
@@ -309,7 +262,24 @@ const MainAppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans text-slate-900">
-      {/* Top Navbar (Architecture Proposal Button removed) */}
+      {/* Banner de Modo Demonstração */}
+      {isDemoMode && (
+        <div className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 px-4 py-2.5 text-xs font-bold flex items-center justify-between shadow-md z-50 border-b border-amber-600">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-slate-950 shrink-0 animate-pulse" />
+            <span>MODO DEMONSTRAÇÃO ATIVO — Exibindo informações e prontuários fictícios para apresentação. Nenhuma alteração é gravada na base real.</span>
+          </div>
+          <button
+            type="button"
+            onClick={exitDemoMode}
+            className="px-3 py-1 bg-slate-950 hover:bg-slate-900 text-white rounded-lg text-[11px] font-bold transition-colors cursor-pointer shadow-xs shrink-0 ml-3"
+          >
+            Sair da Demonstração
+          </button>
+        </div>
+      )}
+
+      {/* Top Navbar */}
       <Navbar onSearchSelectPatient={(id) => setSelectedPatientId(id)} />
 
       {/* Main Tab Navigation */}

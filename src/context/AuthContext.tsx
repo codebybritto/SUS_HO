@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserPermissions, Unit } from '../types';
-import { storageService } from '../services/storage';
+import { storageService, DEMO_USER } from '../services/storage';
 import { supabaseService } from '../services/supabaseService';
 import { isSupabaseConfigured } from '../services/supabase';
 
@@ -13,6 +13,9 @@ interface AuthContextType {
   switchUser: (userId: string) => void;
   login: (login: string, pass?: string) => Promise<boolean>;
   logout: () => void;
+  isDemoMode: boolean;
+  enterDemoMode: () => void;
+  exitDemoMode: () => void;
   sessionExpiredMessage: string | null;
   clearSessionExpiredMessage: () => void;
   hasPermission: (permission: keyof UserPermissions) => boolean;
@@ -36,6 +39,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [allUnits, setAllUnits] = useState<Unit[]>(() => storageService.getUnits());
   const [activeUnitId, setActiveUnitIdState] = useState<string | 'ALL'>('ALL');
   const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(null);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('micrologos_is_demo_mode_v5') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const enterDemoMode = () => {
+    setIsDemoMode(true);
+    try {
+      localStorage.setItem('micrologos_is_demo_mode_v5', 'true');
+    } catch {}
+    setCurrentUser(DEMO_USER);
+    storageService.setCurrentUser(DEMO_USER);
+    setSessionExpiredMessage(null);
+  };
+
+  const exitDemoMode = () => {
+    setIsDemoMode(false);
+    try {
+      localStorage.setItem('micrologos_is_demo_mode_v5', 'false');
+    } catch {}
+    setCurrentUser(null);
+    storageService.setCurrentUser(null);
+  };
 
   useEffect(() => {
     // Refresh units in case updated
@@ -87,6 +116,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const login = async (loginInput: string, pass?: string): Promise<boolean> => {
+    setIsDemoMode(false);
+    try {
+      localStorage.setItem('micrologos_is_demo_mode_v5', 'false');
+    } catch {}
+
     const cleanLogin = (loginInput || '').trim().toLowerCase();
     const cleanPass = (pass || '').trim();
 
@@ -131,6 +165,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    setIsDemoMode(false);
+    try {
+      localStorage.setItem('micrologos_is_demo_mode_v5', 'false');
+    } catch {}
     setCurrentUser(null);
     storageService.setCurrentUser(null);
   };
@@ -260,6 +298,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         switchUser,
         login,
         logout,
+        isDemoMode,
+        enterDemoMode,
+        exitDemoMode,
         sessionExpiredMessage,
         clearSessionExpiredMessage,
         hasPermission,

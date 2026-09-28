@@ -15,7 +15,7 @@ import {
   Municipality,
   PatientProcedureItem,
 } from '../types';
-import { storageService } from '../services/storage';
+import { storageService, INITIAL_PATIENTS } from '../services/storage';
 import { supabaseService } from '../services/supabaseService';
 import { isSupabaseConfigured } from '../services/supabase';
 import { useAuth } from './AuthContext';
@@ -84,9 +84,11 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, isDemoMode } = useAuth();
 
-  const [patients, setPatients] = useState<Patient[]>(() => storageService.getPatients());
+  const [patients, setPatients] = useState<Patient[]>(() =>
+    isDemoMode ? INITIAL_PATIENTS : storageService.getPatients()
+  );
   const [units, setUnits] = useState<Unit[]>(() => storageService.getUnits());
   const [municipalities, setMunicipalities] = useState<Municipality[]>(() =>
     storageService.getMunicipalities()
@@ -141,15 +143,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Helper to sync patient changes to Supabase in background
   const syncPatientToSupabase = useCallback((patient: Patient) => {
+    if (isDemoMode) return;
     if (isSupabaseConfigured()) {
       supabaseService.upsertPatient(patient).catch((err) => {
         console.warn('Erro ao salvar paciente no Supabase:', err);
       });
     }
-  }, []);
+  }, [isDemoMode]);
 
   // Sync entire dataset to Supabase
   const syncAllToSupabase = useCallback(async (): Promise<{ success: boolean; message: string }> => {
+    if (isDemoMode) {
+      return {
+        success: false,
+        message: 'Modo demonstração ativo com dados fictícios. Nenhuma alteração é gravada no Supabase.',
+      };
+    }
+
     if (!isSupabaseConfigured()) {
       return {
         success: false,
@@ -182,10 +192,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         message: `Falha na sincronização: ${err?.message || err}`,
       };
     }
-  }, [municipalities, units, procedures, doctors, users, patients, settings]);
+  }, [isDemoMode, municipalities, units, procedures, doctors, users, patients, settings]);
 
   // Load dataset from Supabase
   const reloadFromSupabase = useCallback(async () => {
+    if (isDemoMode) return;
+
     if (!isSupabaseConfigured()) {
       setSupabaseSyncStatus('unconfigured');
       return;
@@ -263,17 +275,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [syncAllToSupabase]);
 
-  // Initial load from Supabase on mount
+  // Initial load from Supabase or switch to Demo mode
   useEffect(() => {
-    if (isSupabaseConfigured()) {
+    if (isDemoMode) {
+      setPatients(INITIAL_PATIENTS);
+    } else if (isSupabaseConfigured()) {
       reloadFromSupabase();
     }
-  }, [reloadFromSupabase]);
+  }, [isDemoMode, reloadFromSupabase]);
 
-  // Save changes to LocalStorage whenever state updates (offline cache)
+  // Save changes to LocalStorage whenever state updates (offline cache) - ONLY in real mode
   useEffect(() => {
-    storageService.savePatients(patients);
-  }, [patients]);
+    if (!isDemoMode) {
+      storageService.savePatients(patients);
+    }
+  }, [patients, isDemoMode]);
 
   useEffect(() => {
     storageService.saveUnits(units);
