@@ -395,7 +395,9 @@ export const AdminView: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {units.map((unit) => (
+                      {units
+                        .filter((u) => !['unit-1', 'unit-2', 'unit-3', 'unit-4'].includes(u.id))
+                        .map((unit) => (
                         <tr key={unit.id} className="hover:bg-slate-50/80 transition-colors">
                           <td className="py-2.5 px-3">
                             <span className="font-mono text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 mr-2">

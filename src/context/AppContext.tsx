@@ -239,19 +239,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       let hasSupabaseData = false;
 
       if (supaUnits && supaUnits.length > 0) {
-        setUnits(supaUnits);
+        const cleanUnits = supaUnits.filter(
+          (u) => u.active !== false && !['unit-1', 'unit-2', 'unit-3', 'unit-4'].includes(u.id)
+        );
+        setUnits(cleanUnits);
+        storageService.saveUnits(cleanUnits);
         hasSupabaseData = true;
       }
       if (supaMunis && supaMunis.length > 0) {
         setMunicipalities(supaMunis);
+        storageService.saveMunicipalities(supaMunis);
         hasSupabaseData = true;
       }
       if (supaProcs && supaProcs.length > 0) {
         setProcedures(supaProcs);
+        storageService.saveProcedures(supaProcs);
         hasSupabaseData = true;
       }
       if (supaDocs && supaDocs.length > 0) {
         setDoctors(supaDocs);
+        storageService.saveDoctors(supaDocs);
         hasSupabaseData = true;
       }
       if (supaUsers && supaUsers.length > 0) {

@@ -237,7 +237,7 @@ export const DEMO_USER: User = {
   login: 'demo',
   role: 'supervisor',
   active: true,
-  unitIds: ['unit-1', 'unit-2', 'unit-3', 'unit-4'],
+  unitIds: ['unit-lagos', 'unit-sjm', 'unit-mage'],
   permissions: {
     view_patients: true,
     create_patients: true,
@@ -917,14 +917,26 @@ export const storageService = {
   getUnits(): Unit[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.UNITS);
-      return data ? JSON.parse(data) : INITIAL_UNITS;
+      if (data) {
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed)) {
+          const filtered = parsed.filter(
+            (u: any) => u.active !== false && !['unit-1', 'unit-2', 'unit-3', 'unit-4'].includes(u.id)
+          );
+          if (filtered.length > 0) return filtered;
+        }
+      }
+      return INITIAL_UNITS;
     } catch {
       return INITIAL_UNITS;
     }
   },
 
   saveUnits(units: Unit[]): void {
-    localStorage.setItem(STORAGE_KEYS.UNITS, JSON.stringify(units));
+    const cleanUnits = units.filter(
+      (u) => u.active !== false && !['unit-1', 'unit-2', 'unit-3', 'unit-4'].includes(u.id)
+    );
+    localStorage.setItem(STORAGE_KEYS.UNITS, JSON.stringify(cleanUnits));
   },
 
   getMunicipalities(): Municipality[] {
