@@ -15,6 +15,7 @@ import {
 import { Patient } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
+import { getUnitMunicipalities } from '../../services/storage';
 
 interface DashboardViewProps {
   onSelectPatient: (patient: Patient) => void;
@@ -26,7 +27,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigateToPatientsWithFilter,
 }) => {
   const { patients, units, municipalities } = useApp();
-  const { allowedUnits, activeUnitId, setActiveUnitId } = useAuth();
+  const { allowedUnits, activeUnitId, setActiveUnitId, currentUser } = useAuth();
 
   const [selectedCity, setSelectedCity] = useState<string>('ALL');
 
@@ -37,38 +38,42 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const set = new Set<string>();
 
     if (activeUnitId !== 'ALL') {
-      const targetUnit = units.find((u) => u.id === activeUnitId);
-      if (targetUnit?.municipalities && targetUnit.municipalities.length > 0) {
-        targetUnit.municipalities.forEach((m) => {
-          if (m && m.trim()) set.add(m.trim());
-        });
-      } else {
-        municipalities.forEach((m) => {
-          if (m.name && m.active !== false) set.add(m.name.trim());
-        });
-      }
-    } else {
-      const accessibleUnits = allowedUnits.length > 0 ? allowedUnits : units;
-      let hasUnitSpecificMunicipalities = false;
+      const targetUnit =
+        units.find((u) => u.id === activeUnitId) ||
+        allowedUnits.find((u) => u.id === activeUnitId);
 
-      accessibleUnits.forEach((u) => {
-        if (u.municipalities && u.municipalities.length > 0) {
-          hasUnitSpecificMunicipalities = true;
-          u.municipalities.forEach((m) => {
+      const unitCities = getUnitMunicipalities(targetUnit);
+      unitCities.forEach((m) => {
+        if (m && m.trim()) set.add(m.trim());
+      });
+    } else {
+      const userHasAccessToAll =
+        currentUser?.role === 'admin' ||
+        allowedUnits.length >= units.length ||
+        allowedUnits.length >= 3;
+
+      if (userHasAccessToAll) {
+        units.forEach((u) => {
+          const uCities = getUnitMunicipalities(u);
+          uCities.forEach((m) => {
             if (m && m.trim()) set.add(m.trim());
           });
-        }
-      });
-
-      if (!hasUnitSpecificMunicipalities || set.size === 0) {
+        });
         municipalities.forEach((m) => {
           if (m.name && m.active !== false) set.add(m.name.trim());
+        });
+      } else {
+        allowedUnits.forEach((u) => {
+          const uCities = getUnitMunicipalities(u);
+          uCities.forEach((m) => {
+            if (m && m.trim()) set.add(m.trim());
+          });
         });
       }
     }
 
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'));
-  }, [activeUnitId, units, allowedUnits, municipalities]);
+  }, [activeUnitId, units, allowedUnits, municipalities, currentUser]);
 
   // Reset selectedCity when activeUnitId changes if current city is not in available list
   useEffect(() => {

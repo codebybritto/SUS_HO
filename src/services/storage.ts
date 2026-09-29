@@ -103,6 +103,33 @@ export const INITIAL_UNITS: Unit[] = [
   },
 ];
 
+export const UNIT_DEFAULT_MUNICIPALITIES: Record<string, string[]> = {
+  'unit-lagos': ['Armação dos Búzios', 'São Pedro da Aldeia', 'Arraial do Cabo'],
+  'unit-sjm': ['São João de Meriti'],
+  'unit-mage': ['Magé'],
+};
+
+export const getUnitMunicipalities = (unit?: Unit | null): string[] => {
+  if (!unit) return [];
+  if (Array.isArray(unit.municipalities) && unit.municipalities.length > 0) {
+    return unit.municipalities;
+  }
+  if (UNIT_DEFAULT_MUNICIPALITIES[unit.id]) {
+    return UNIT_DEFAULT_MUNICIPALITIES[unit.id];
+  }
+  const name = (unit.name || '').toLowerCase();
+  if (name.includes('lago')) {
+    return ['Armação dos Búzios', 'São Pedro da Aldeia', 'Arraial do Cabo'];
+  }
+  if (name.includes('meriti') || name.includes('são joão')) {
+    return ['São João de Meriti'];
+  }
+  if (name.includes('magé') || name.includes('mage')) {
+    return ['Magé'];
+  }
+  return [];
+};
+
 export const INITIAL_PROCEDURES: Procedure[] = [
   {
     id: 'proc-1',
@@ -506,7 +533,15 @@ export const storageService = {
           const filtered = parsed.filter(
             (u: any) => u.active !== false && !['unit-1', 'unit-2', 'unit-3', 'unit-4'].includes(u.id)
           );
-          if (filtered.length > 0) return filtered;
+          if (filtered.length > 0) {
+            return filtered.map((u: any) => ({
+              ...u,
+              municipalities:
+                Array.isArray(u.municipalities) && u.municipalities.length > 0
+                  ? u.municipalities
+                  : getUnitMunicipalities(u),
+            }));
+          }
         }
       }
       return INITIAL_UNITS;
@@ -516,9 +551,15 @@ export const storageService = {
   },
 
   saveUnits(units: Unit[]): void {
-    const cleanUnits = units.filter(
-      (u) => u.active !== false && !['unit-1', 'unit-2', 'unit-3', 'unit-4'].includes(u.id)
-    );
+    const cleanUnits = units
+      .filter((u) => u.active !== false && !['unit-1', 'unit-2', 'unit-3', 'unit-4'].includes(u.id))
+      .map((u) => ({
+        ...u,
+        municipalities:
+          Array.isArray(u.municipalities) && u.municipalities.length > 0
+            ? u.municipalities
+            : getUnitMunicipalities(u),
+      }));
     localStorage.setItem(STORAGE_KEYS.UNITS, JSON.stringify(cleanUnits));
   },
 

@@ -21,6 +21,7 @@ import {
 import { Patient, PatientStatus } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
+import { getUnitMunicipalities } from '../../services/storage';
 import { formatDateBR, calculateAge } from '../../utils/date';
 import { AppLogo } from '../common/AppLogo';
 import { getStatusStyle } from '../../utils/statusColors';
@@ -28,10 +29,22 @@ import { LOGO_BASE64 } from '../../assets/logo';
 
 export const ReportsView: React.FC = () => {
   const { patients, units, procedures, doctors, municipalities } = useApp();
-  const { allowedUnits, currentUser, hasPermission } = useAuth();
+  const { allowedUnits, activeUnitId, currentUser, hasPermission } = useAuth();
 
   // Filters (Note: Faixa Etária removed as requested)
-  const [selectedUnit, setSelectedUnit] = useState<string>('ALL');
+  const [selectedUnit, setSelectedUnit] = useState<string>(() => {
+    if (activeUnitId && activeUnitId !== 'ALL') return activeUnitId;
+    if (allowedUnits.length === 1) return allowedUnits[0].id;
+    return 'ALL';
+  });
+
+  // Sync selectedUnit with activeUnitId when changed in navbar
+  useEffect(() => {
+    if (activeUnitId && activeUnitId !== 'ALL') {
+      setSelectedUnit(activeUnitId);
+    }
+  }, [activeUnitId]);
+
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
@@ -53,43 +66,46 @@ export const ReportsView: React.FC = () => {
     const set = new Set<string>();
 
     if (selectedUnit !== 'ALL') {
-      const targetUnit = units.find((u) => u.id === selectedUnit);
-      if (targetUnit?.municipalities && targetUnit.municipalities.length > 0) {
-        targetUnit.municipalities.forEach((m) => {
-          if (m && m.trim()) set.add(m.trim());
-        });
-      } else {
-        // Fallback: cities of patients in this unit
-        patients.forEach((p) => {
-          if (p.unitId === selectedUnit && p.city) set.add(p.city.trim());
-        });
-      }
-    } else {
-      // "ALL" units: show municipalities for all authorized units
-      const accessibleUnits = allowedUnits.length > 0 ? allowedUnits : units;
-      let hasUnitSpecificMunicipalities = false;
+      // 1. SPECIFIC UNIT: strictly show municipalities of this unit
+      const targetUnit =
+        units.find((u) => u.id === selectedUnit) ||
+        allowedUnits.find((u) => u.id === selectedUnit);
 
-      accessibleUnits.forEach((u) => {
-        if (u.municipalities && u.municipalities.length > 0) {
-          hasUnitSpecificMunicipalities = true;
-          u.municipalities.forEach((m) => {
+      const unitCities = getUnitMunicipalities(targetUnit);
+      unitCities.forEach((m) => {
+        if (m && m.trim()) set.add(m.trim());
+      });
+    } else {
+      // 2. "ALL" UNITS:
+      // If the user is admin or has access to all units, show all municipalities for authorized units:
+      const userHasAccessToAll =
+        currentUser?.role === 'admin' ||
+        allowedUnits.length >= units.length ||
+        allowedUnits.length >= 3;
+
+      if (userHasAccessToAll) {
+        units.forEach((u) => {
+          const uCities = getUnitMunicipalities(u);
+          uCities.forEach((m) => {
             if (m && m.trim()) set.add(m.trim());
           });
-        }
-      });
-
-      if (!hasUnitSpecificMunicipalities || set.size === 0) {
+        });
         municipalities.forEach((m) => {
           if (m.name && m.active !== false) set.add(m.name.trim());
         });
-        patients.forEach((p) => {
-          if (p.city && allowedUnitIds.includes(p.unitId)) set.add(p.city.trim());
+      } else {
+        // User only has access to a subset of units: strictly show municipalities of those allowed units
+        allowedUnits.forEach((u) => {
+          const uCities = getUnitMunicipalities(u);
+          uCities.forEach((m) => {
+            if (m && m.trim()) set.add(m.trim());
+          });
         });
       }
     }
 
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'));
-  }, [selectedUnit, units, allowedUnits, allowedUnitIds, municipalities, patients]);
+  }, [selectedUnit, units, allowedUnits, municipalities, currentUser]);
 
   // Reset selectedCity if current selection is not available in the scoped unit's cities
   useEffect(() => {
