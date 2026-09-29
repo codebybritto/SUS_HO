@@ -72,6 +72,13 @@ export const buildUserFromAuthAndProfile = (authUser: any, profile?: any): User 
   const unitIds: string[] =
     profile?.unit_ids || authUser.user_metadata?.unit_ids || ['unit-lagos', 'unit-sjm', 'unit-mage'];
 
+  const mustChange = Boolean(
+    profile?.mustChangePassword ??
+    profile?.must_change_password ??
+    authUser?.user_metadata?.must_change_password ??
+    authUser?.user_metadata?.force_change_password
+  );
+
   return {
     id: authUser.id,
     name: profile?.name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Usuário',
@@ -83,7 +90,7 @@ export const buildUserFromAuthAndProfile = (authUser: any, profile?: any): User 
     email: authUser.email,
     createdAt: profile?.created_at || authUser.created_at || new Date().toISOString(),
     lastLoginAt: authUser.last_sign_in_at || new Date().toISOString(),
-    mustChangePassword: Boolean(profile?.must_change_password),
+    mustChangePassword: mustChange,
   };
 };
 
@@ -402,11 +409,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!supabase || !isSupabaseConfigured()) return false;
 
     try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+        data: { must_change_password: false },
+      });
       if (error) {
         console.error('Erro ao atualizar senha no Supabase Auth:', error.message);
         return false;
       }
+
+      try {
+        await supabase.from('profiles').update({ must_change_password: false }).eq('id', currentUser.id);
+      } catch {}
+      try {
+        await supabase.from('system_users').update({ must_change_password: false }).eq('id', currentUser.id);
+      } catch {}
+
       clearMustChangePasswordFlag();
       return true;
     } catch (err) {
@@ -418,10 +436,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const adminResetPassword = async (
     userId: string,
     newPassword: string,
-    _forceChangeOnNextLogin: boolean
+    forceChangeOnNextLogin: boolean = true
   ): Promise<boolean> => {
     if (isDemoMode) return false;
-    return await supabaseService.adminResetPassword(userId, newPassword);
+    return await supabaseService.adminResetPassword(userId, newPassword, forceChangeOnNextLogin);
   };
 
   const clearMustChangePasswordFlag = () => {

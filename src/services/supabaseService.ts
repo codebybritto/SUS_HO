@@ -377,6 +377,14 @@ export const supabaseService = {
     try {
       const { data: profs, error: profErr } = await supabase.from('profiles').select('*');
       if (!profErr && profs && profs.length > 0) {
+        let suMap: Record<string, boolean> = {};
+        try {
+          const { data: suList } = await supabase.from('system_users').select('id, must_change_password');
+          (suList || []).forEach((su: any) => {
+            if (su.id) suMap[su.id] = Boolean(su.must_change_password);
+          });
+        } catch {}
+
         return profs.map((r: any) => ({
           id: r.id,
           name: r.name,
@@ -388,7 +396,7 @@ export const supabaseService = {
           email: r.email,
           createdAt: r.created_at,
           lastLoginAt: undefined,
-          mustChangePassword: false,
+          mustChangePassword: Boolean(r.must_change_password ?? suMap[r.id]),
         }));
       }
     } catch {
@@ -421,6 +429,14 @@ export const supabaseService = {
     try {
       const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
       if (!error && data) {
+        let mustChange = Boolean(data.must_change_password);
+        if (!mustChange) {
+          try {
+            const { data: su } = await supabase.from('system_users').select('must_change_password').eq('id', userId).maybeSingle();
+            if (su?.must_change_password) mustChange = true;
+          } catch {}
+        }
+
         return {
           id: data.id,
           name: data.name,
@@ -431,6 +447,7 @@ export const supabaseService = {
           permissions: data.permissions || {},
           email: data.email,
           createdAt: data.created_at,
+          mustChangePassword: mustChange,
         };
       }
     } catch {}
@@ -446,6 +463,7 @@ export const supabaseService = {
     unitIds: string[];
     permissions: UserPermissions;
     active?: boolean;
+    mustChangePassword?: boolean;
   }): Promise<User | null> {
     if (!supabase || !isSupabaseConfigured()) return null;
 
@@ -466,6 +484,12 @@ export const supabaseService = {
       const contentType = res.headers.get('content-type') || '';
       if (res.ok && contentType.includes('application/json')) {
         const data = await res.json();
+        const savedId = data.id;
+        try {
+          await supabase.from('system_users').update({ must_change_password: Boolean(u.mustChangePassword) }).eq('id', savedId);
+          await supabase.from('profiles').update({ must_change_password: Boolean(u.mustChangePassword) }).eq('id', savedId);
+        } catch {}
+
         return {
           id: data.id,
           name: data.name,
@@ -476,6 +500,7 @@ export const supabaseService = {
           permissions: data.permissions || {},
           active: data.active,
           createdAt: data.createdAt,
+          mustChangePassword: Boolean(u.mustChangePassword),
         };
       }
 
@@ -504,6 +529,12 @@ export const supabaseService = {
       });
 
       if (!rpcErr && rpcData) {
+        const savedId = rpcData.id;
+        try {
+          await supabase.from('system_users').update({ must_change_password: Boolean(u.mustChangePassword) }).eq('id', savedId);
+          await supabase.from('profiles').update({ must_change_password: Boolean(u.mustChangePassword) }).eq('id', savedId);
+        } catch {}
+
         return {
           id: rpcData.id,
           name: rpcData.name,
@@ -514,6 +545,7 @@ export const supabaseService = {
           permissions: rpcData.permissions || {},
           active: rpcData.active,
           createdAt: rpcData.created_at,
+          mustChangePassword: Boolean(u.mustChangePassword),
         };
       }
       if (rpcErr) {
@@ -548,6 +580,12 @@ export const supabaseService = {
 
       if (res.ok) {
         const data = await res.json();
+        if (typeof u.mustChangePassword === 'boolean') {
+          try {
+            await supabase.from('system_users').update({ must_change_password: u.mustChangePassword }).eq('id', u.id);
+            await supabase.from('profiles').update({ must_change_password: u.mustChangePassword }).eq('id', u.id);
+          } catch {}
+        }
         return {
           id: data.id,
           name: data.name,
@@ -558,6 +596,7 @@ export const supabaseService = {
           permissions: data.permissions || {},
           active: data.active,
           createdAt: data.createdAt,
+          mustChangePassword: typeof u.mustChangePassword === 'boolean' ? u.mustChangePassword : data.mustChangePassword,
         };
       }
     } catch {}
@@ -571,6 +610,7 @@ export const supabaseService = {
     if (u.unitIds) updateFields.unit_ids = u.unitIds;
     if (u.permissions) updateFields.permissions = u.permissions;
     if (typeof u.active === 'boolean') updateFields.active = u.active;
+    if (typeof u.mustChangePassword === 'boolean') updateFields.must_change_password = u.mustChangePassword;
 
     const { data, error } = await supabase
       .from('profiles')
@@ -578,6 +618,12 @@ export const supabaseService = {
       .eq('id', u.id)
       .select()
       .single();
+
+    if (typeof u.mustChangePassword === 'boolean') {
+      try {
+        await supabase.from('system_users').update({ must_change_password: u.mustChangePassword }).eq('id', u.id);
+      } catch {}
+    }
 
     if (error || !data) return null;
 
@@ -591,11 +637,16 @@ export const supabaseService = {
       permissions: data.permissions || {},
       active: data.active,
       createdAt: data.created_at,
+      mustChangePassword: typeof u.mustChangePassword === 'boolean' ? u.mustChangePassword : Boolean(data.must_change_password),
     };
   },
 
-  async adminResetPassword(userId: string, newPassword: string): Promise<boolean> {
-    if (!supabase || !isSupabaseConfigured()) return false;
+  async adminResetPassword(
+    userId: string,
+    newPassword: string,
+    forceChangeOnNextLogin: boolean = true
+  ): Promise<boolean> {
+    if (!supabase || !isSupabaseConfigured() || !userId || !newPassword) return false;
 
     const session = (await supabase.auth.getSession()).data.session;
     const token = session?.access_token;
@@ -608,10 +659,16 @@ export const supabaseService = {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ id: userId, newPassword }),
+        body: JSON.stringify({ id: userId, newPassword, forceChange: forceChangeOnNextLogin }),
       });
 
-      if (res.ok) return true;
+      if (res.ok) {
+        try {
+          await supabase.from('system_users').update({ must_change_password: forceChangeOnNextLogin }).eq('id', userId);
+          await supabase.from('profiles').update({ must_change_password: forceChangeOnNextLogin }).eq('id', userId);
+        } catch {}
+        return true;
+      }
     } catch {}
 
     // 2. Fallback via RPC admin_reset_user_password
@@ -620,7 +677,20 @@ export const supabaseService = {
         target_user_id: userId,
         new_password: newPassword,
       });
-      if (!rpcErr) return true;
+      if (!rpcErr) {
+        try {
+          await supabase.from('system_users').update({ must_change_password: forceChangeOnNextLogin }).eq('id', userId);
+          await supabase.from('profiles').update({ must_change_password: forceChangeOnNextLogin }).eq('id', userId);
+        } catch {}
+        return true;
+      }
+    } catch {}
+
+    // Atualiza diretamente no banco se permitido
+    try {
+      await supabase.from('system_users').update({ must_change_password: forceChangeOnNextLogin }).eq('id', userId);
+      await supabase.from('profiles').update({ must_change_password: forceChangeOnNextLogin }).eq('id', userId);
+      return true;
     } catch {}
 
     return false;

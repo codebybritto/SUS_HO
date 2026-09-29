@@ -73,7 +73,7 @@ export default async function handler(req: any, res: any) {
 
     if (req.method === 'POST') {
       // CREATE USER
-      const { name, login, email, password, role, unitIds, permissions, active } = body || {};
+      const { name, login, email, password, role, unitIds, permissions, active, mustChangePassword } = body || {};
 
       if (!name || !login) {
         return sendJson(400, { error: 'Nome e login são obrigatórios.' });
@@ -104,6 +104,7 @@ export default async function handler(req: any, res: any) {
           role: role || 'attendant',
           unit_ids: Array.isArray(unitIds) ? unitIds : [],
           permissions: permissions || {},
+          must_change_password: Boolean(mustChangePassword),
         },
       });
 
@@ -114,7 +115,7 @@ export default async function handler(req: any, res: any) {
       const authId = newAuth.user.id;
 
       // Upsert profile
-      const profileRow = {
+      const profileRow: any = {
         id: authId,
         name: String(name).trim(),
         login: cleanLogin,
@@ -123,6 +124,7 @@ export default async function handler(req: any, res: any) {
         unit_ids: Array.isArray(unitIds) ? unitIds : [],
         permissions: permissions || {},
         active: active !== false,
+        must_change_password: Boolean(mustChangePassword),
         updated_at: new Date().toISOString(),
       };
 
@@ -149,6 +151,7 @@ export default async function handler(req: any, res: any) {
           unit_ids: profileRow.unit_ids,
           permissions: profileRow.permissions,
           email: profileRow.email,
+          must_change_password: Boolean(mustChangePassword),
           created_at: new Date().toISOString(),
         }, { onConflict: 'id' });
       } catch {}
@@ -162,13 +165,14 @@ export default async function handler(req: any, res: any) {
         unitIds: savedProfile.unit_ids || [],
         permissions: savedProfile.permissions || {},
         active: savedProfile.active,
+        mustChangePassword: Boolean(mustChangePassword),
         createdAt: savedProfile.created_at,
       });
     }
 
     if (req.method === 'PUT') {
       // UPDATE USER
-      const { id, name, role, unitIds, permissions, active, password } = body || {};
+      const { id, name, role, unitIds, permissions, active, password, mustChangePassword } = body || {};
       if (!id) {
         return sendJson(400, { error: 'ID do usuário é obrigatório para atualização.' });
       }
@@ -199,6 +203,10 @@ export default async function handler(req: any, res: any) {
       if (unitIds) updateFields.unit_ids = unitIds;
       if (permissions) updateFields.permissions = permissions;
       if (typeof active === 'boolean') updateFields.active = active;
+      if (typeof mustChangePassword === 'boolean') {
+        updateFields.must_change_password = mustChangePassword;
+        updateData.user_metadata.must_change_password = mustChangePassword;
+      }
 
       const { data: updatedProf, error: updErr } = await adminClient
         .from('profiles')
@@ -225,6 +233,7 @@ export default async function handler(req: any, res: any) {
         unitIds: updatedProf.unit_ids || [],
         permissions: updatedProf.permissions || {},
         active: updatedProf.active,
+        mustChangePassword: typeof mustChangePassword === 'boolean' ? mustChangePassword : Boolean(updatedProf.must_change_password),
         createdAt: updatedProf.created_at,
       });
     }
@@ -257,7 +266,7 @@ export default async function handler(req: any, res: any) {
 
     if (req.method === 'PATCH') {
       // RESET PASSWORD
-      const { id, newPassword } = body || {};
+      const { id, newPassword, forceChange } = body || {};
       if (!id || !newPassword) {
         return sendJson(400, { error: 'ID do usuário e nova senha são obrigatórios.' });
       }
@@ -266,13 +275,28 @@ export default async function handler(req: any, res: any) {
         return sendJson(400, { error: 'A nova senha deve ter no mínimo 6 caracteres.' });
       }
 
+      const shouldForce = forceChange !== false;
+      const { data: targetUser } = await adminClient.auth.admin.getUserById(id);
+      const currentMeta = targetUser?.user?.user_metadata || {};
+
       const { error: resetErr } = await adminClient.auth.admin.updateUserById(id, {
         password: String(newPassword).trim(),
+        user_metadata: {
+          ...currentMeta,
+          must_change_password: shouldForce,
+        },
       });
 
       if (resetErr) {
         return sendJson(500, { error: resetErr.message });
       }
+
+      try {
+        await adminClient.from('profiles').update({ must_change_password: shouldForce }).eq('id', id);
+      } catch {}
+      try {
+        await adminClient.from('system_users').update({ must_change_password: shouldForce }).eq('id', id);
+      } catch {}
 
       return sendJson(200, { success: true, message: 'Senha redefinida com sucesso no Supabase Auth.' });
     }

@@ -156,26 +156,53 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 3. Redefinição de senha de operador por administrador
+-- 2.5. Garante coluna must_change_password na tabela profiles
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT false;
+
+-- 3. Redefinição de senha de operador por administrador (com opção de forçar troca de senha no próximo login)
 CREATE OR REPLACE FUNCTION public.admin_reset_user_password(
   target_user_id UUID,
-  new_password TEXT
+  new_password TEXT,
+  force_change BOOLEAN DEFAULT true
 )
 RETURNS BOOLEAN AS $$
+DECLARE
+  enc_pw TEXT;
 BEGIN
   IF NOT public.is_admin() THEN
     RAISE EXCEPTION 'Acesso negado: apenas administradores podem redefinir senhas';
   END IF;
 
+  enc_pw := extensions.crypt(new_password, extensions.gen_salt('bf', 10));
+
   UPDATE auth.users
-  SET encrypted_password = extensions.crypt(new_password, extensions.gen_salt('bf', 10)),
+  SET encrypted_password = enc_pw,
       recovery_token = '',
+      raw_user_meta_data = COALESCE(raw_user_meta_data, '{}'::jsonb) || jsonb_build_object('must_change_password', force_change),
       updated_at = NOW()
   WHERE id = target_user_id;
+
+  UPDATE public.profiles
+  SET must_change_password = force_change,
+      updated_at = NOW()
+  WHERE id = target_user_id;
+
+  UPDATE public.system_users
+  SET must_change_password = force_change
+  WHERE id = target_user_id::text;
 
   RETURN true;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Sobrecarga com 2 parâmetros para compatibilidade
+CREATE OR REPLACE FUNCTION public.admin_reset_user_password(
+  target_user_id UUID,
+  new_password TEXT
+)
+RETURNS BOOLEAN AS $$
+  SELECT public.admin_reset_user_password(target_user_id, new_password, true);
+$$ LANGUAGE sql SECURITY DEFINER;
 
 -- 4. Exclusão de operador por administrador
 CREATE OR REPLACE FUNCTION public.admin_delete_user(
@@ -201,6 +228,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- 5. Permissões de execução para usuários autenticados e service_role
 GRANT EXECUTE ON FUNCTION public.admin_create_user(TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, JSONB) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.admin_reset_user_password(UUID, TEXT) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.admin_reset_user_password(UUID, TEXT, BOOLEAN) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.admin_delete_user(UUID) TO authenticated, service_role;
 
 -- 6. Notifica o PostgREST para recarregar o cache de esquemas imediatamente

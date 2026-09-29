@@ -1407,6 +1407,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         unitIds: userData.unitIds,
         permissions: userData.permissions,
         active: userData.active ?? true,
+        mustChangePassword: userData.mustChangePassword,
       });
 
       if (!created) {
