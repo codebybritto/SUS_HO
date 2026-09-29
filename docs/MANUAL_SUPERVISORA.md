@@ -81,7 +81,7 @@ O sistema aplica automaticamente a transição para **Aguardando Micrologos** qu
 1. Filtre a lista pelo status **Aguardando Micrologos**.
 2. Abra a ficha do paciente para analisar as datas e os motivos anotados pela recepção.
 3. Acione o canal de busca ativa com a **Unidade Básica de Saúde (UBS)** ou Secretaria de Saúde do município do paciente.
-4. Ao restabelecer o contato com o paciente, registre a evolução e altere a condição para **Agendado** ou **Regulado**.
+4. Ao restabelecer o contato com o paciente, registre a evolução e altere a condição para **Agendado** (preenchendo os **Dados Cirúrgicos**: Data da Cirurgia, Hora da Cirurgia e Local/Sala) ou **Regulado**.
 
 ---
 

@@ -20,6 +20,7 @@ import { supabaseService } from '../services/supabaseService';
 import { isSupabaseConfigured } from '../services/supabase';
 import { syncQueueService } from '../services/syncQueueService';
 import { useAuth } from './AuthContext';
+import { formatDateBR } from '../utils/date';
 
 export type SupabaseStatus = 'connected' | 'offline' | 'syncing' | 'unconfigured' | 'error';
 
@@ -823,7 +824,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           updatedStatus = (normalizedSituation === 'Micrologos'
             ? 'Aguardando Micrologos'
             : normalizedSituation) as PatientStatus;
-          timelineDesc = `Evolução: Situação alterada para "${updatedStatus}". Obs: ${notes}`;
+
+          if (updatedStatus === 'Agendado' && complementaryInfo?.scheduledDate) {
+            const dateStr = formatDateBR(complementaryInfo.scheduledDate);
+            const timeStr = complementaryInfo.scheduledTime ? ` às ${complementaryInfo.scheduledTime}` : '';
+            const locStr = complementaryInfo.scheduledLocation ? ` no local ${complementaryInfo.scheduledLocation}` : '';
+            timelineDesc = `Cirurgia agendada para ${dateStr}${timeStr}${locStr}. Obs: ${notes}`;
+          } else {
+            timelineDesc = `Evolução: Situação alterada para "${updatedStatus}". Obs: ${notes}`;
+          }
         }
 
         const newTimelineEvent: TimelineEvent = {

@@ -116,7 +116,25 @@ Na aba **Pacientes**, localize o paciente e clique no botão de **Contato** (íc
 
 ---
 
-## ❌ 6. Como Registrar Faltas e Justificativas
+## 📅 6. Como Marcar Cirurgia (Alterar para Agendado)
+
+Quando o paciente confirma disponibilidade ou o procedimento é marcado:
+1. Na lista de pacientes, na coluna **Ações**, clique no botão com ícone de pulso/atividade (**Registrar Evolução / Tratativa**).
+2. Selecione a situação **Agendado (Procedimento Marcado)**.
+3. O painel exibirá em destaque a seção **Dados Cirúrgicos:**
+
+![Registro de Dados Cirúrgicos do Agendamento](./imagens/tela_dados_cirurgicos.png)
+
+4. Preencha os campos cirúrgicos:
+   - **Data da Cirurgia**: Data exata em que o paciente passará pelo procedimento.
+   - **Hora da Cirurgia**: Horário previsto da cirurgia (ex: `08:30`).
+   - **Local / Sala de Cirurgia**: Identificação da sala ou bloco cirúrgico (ex: `Centro Cirúrgico - Sala 2`).
+5. Digite observações no campo **Observações e Detalhes da Evolução** (ex: orientações de jejum repassadas ao paciente).
+6. Clique em **Salvar Evolução**. A cirurgia e seu horário serão registrados no prontuário e na Linha do Tempo.
+
+---
+
+## ❌ 7. Como Registrar Faltas e Justificativas
 
 Se o paciente faltar a uma consulta agendada ou ao procedimento cirúrgico:
 1. Na lista de pacientes, acione o registro de falta (ícone de calendário com X).
@@ -129,7 +147,7 @@ Se o paciente faltar a uma consulta agendada ou ao procedimento cirúrgico:
 
 ---
 
-## ✅ 7. Como Concluir o Atendimento de um Paciente
+## ✅ 8. Como Concluir o Atendimento de um Paciente
 
 Após o paciente realizar o exame ou cirurgia:
 1. Na lista de pacientes, na coluna **Ações**, clique no botão com ícone de check (**Marcar como Concluído**).
@@ -143,6 +161,6 @@ Após o paciente realizar o exame ou cirurgia:
 
 ---
 
-## 📜 8. Prontuário e Linha do Tempo
+## 📜 9. Prontuário e Linha do Tempo
 
-- Ao clicar no nome do paciente (ou em qualquer linha da tabela), você visualiza a **Linha do Tempo** auditada de todas as ações: data do cadastro, ligações realizadas, desfechos de atendimento e nomes dos operadores responsáveis.
+- Ao clicar no nome do paciente (ou em qualquer linha da tabela), você visualiza a **Linha do Tempo** auditada de todas as ações: data do cadastro, ligações realizadas, agendamentos cirúrgicos com data e hora marcadas, desfechos de atendimento e nomes dos operadores responsáveis.

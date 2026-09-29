@@ -126,6 +126,7 @@ export interface EvolutionRecord {
     returnDate?: string;
     medicalNote?: string;
     scheduledDate?: string;
+    scheduledTime?: string;
     scheduledLocation?: string;
     contactPerson?: string;
   };

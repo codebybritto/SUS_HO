@@ -144,7 +144,7 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({
             <span style="background-color: #e2e8f0; color: #1e293b; padding: 1px 6px; border-radius: 3px; font-weight: bold; text-transform: uppercase;">${e.situation}</span>
           </div>
           <div style="font-size: 11px; color: #1e293b; line-height: 1.4;">${e.notes}</div>
-          ${e.complementaryInfo?.scheduledDate ? `<div style="font-size: 10px; color: #047857; margin-top: 3px;"><strong>Data Agendada:</strong> ${formatDateBR(e.complementaryInfo.scheduledDate)} ${e.complementaryInfo.scheduledLocation ? `— Local: ${e.complementaryInfo.scheduledLocation}` : ''}</div>` : ''}
+          ${e.complementaryInfo?.scheduledDate ? `<div style="font-size: 10px; color: #047857; margin-top: 3px;"><strong>Data da Cirurgia:</strong> ${formatDateBR(e.complementaryInfo.scheduledDate)}${e.complementaryInfo.scheduledTime ? ` às ${e.complementaryInfo.scheduledTime}` : ''} ${e.complementaryInfo.scheduledLocation ? `— Local: ${e.complementaryInfo.scheduledLocation}` : ''}</div>` : ''}
         </div>
       `).join('')
       : '<div style="padding: 10px; color: #94a3b8; text-align: center;">Nenhuma evolução clínica registrada.</div>';
@@ -788,10 +788,10 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({
                       {evo.complementaryInfo && Object.keys(evo.complementaryInfo).length > 0 && (
                         <div className="mt-2 p-2 bg-slate-50 rounded border border-slate-200 text-xs text-slate-600 grid grid-cols-1 sm:grid-cols-2 gap-1">
                           {evo.complementaryInfo.scheduledDate && (
-                            <div>Agendado para: <strong>{formatDateBR(evo.complementaryInfo.scheduledDate)}</strong></div>
+                            <div>Data da Cirurgia: <strong>{formatDateBR(evo.complementaryInfo.scheduledDate)}{evo.complementaryInfo.scheduledTime ? ` às ${evo.complementaryInfo.scheduledTime}` : ''}</strong></div>
                           )}
                           {evo.complementaryInfo.scheduledLocation && (
-                            <div>Local: <strong>{evo.complementaryInfo.scheduledLocation}</strong></div>
+                            <div>Local / Sala: <strong>{evo.complementaryInfo.scheduledLocation}</strong></div>
                           )}
                           {evo.complementaryInfo.medicalNote && (
                             <div>Atestado/CID: <strong>{evo.complementaryInfo.medicalNote}</strong></div>
