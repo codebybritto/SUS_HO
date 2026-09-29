@@ -59,27 +59,23 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
   // Find active unit object
   const currentUnitObj = units.find((u) => u.id === unitId);
 
-  // Unique list of all active registered municipalities in the system, sorted alphabetically
-  const allRegisteredMunicipalities = React.useMemo(() => {
-    const list = municipalities
-      .filter((m) => m.active !== false)
-      .map((m) => m.name.trim())
-      .filter(Boolean);
-    return Array.from(new Set(list)).sort((a, b) => a.localeCompare(b, 'pt-BR'));
-  }, [municipalities]);
-
-  // Municipalities attended by the currently selected unit
+  // Municipalities enabled/attended strictly for the currently selected unit
   const unitAttendedMunicipalities = React.useMemo(() => {
-    if (!currentUnitObj?.municipalities) return [];
+    if (currentUnitObj?.municipalities && currentUnitObj.municipalities.length > 0) {
+      return Array.from(
+        new Set(currentUnitObj.municipalities.map((m) => m.trim()).filter(Boolean))
+      ).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    }
+    // Fallback only if unit has no specific municipalities configured
     return Array.from(
-      new Set(currentUnitObj.municipalities.map((m) => m.trim()).filter(Boolean))
+      new Set(
+        municipalities
+          .filter((m) => m.active !== false)
+          .map((m) => m.name.trim())
+          .filter(Boolean)
+      )
     ).sort((a, b) => a.localeCompare(b, 'pt-BR'));
-  }, [currentUnitObj]);
-
-  // Other registered municipalities in the system not covered by this unit
-  const otherMunicipalities = React.useMemo(() => {
-    return allRegisteredMunicipalities.filter((m) => !unitAttendedMunicipalities.includes(m));
-  }, [allRegisteredMunicipalities, unitAttendedMunicipalities]);
+  }, [currentUnitObj, municipalities]);
 
   // Auto-fill municipality if unit attends only one
   useEffect(() => {
@@ -383,69 +379,34 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                 type="date"
                 value={birthDate}
                 onChange={(e) => setBirthDate(e.target.value)}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                className="w-full h-10 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1 flex items-center justify-between">
-                <span>Município de Residência (Municípios Atendidos) *</span>
-                {unitAttendedMunicipalities.length > 0 && (
-                  <span className="text-[10px] text-cyan-700 font-semibold lowercase">
-                    {unitAttendedMunicipalities.length} atendido(s)
-                  </span>
-                )}
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                Município de Residência *
               </label>
-              <div className="relative">
-                <select
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:ring-1 focus:ring-cyan-500 font-medium"
-                  required
-                >
-                  <option value="">-- Selecione o município atendido --</option>
+              <select
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="w-full h-10 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:ring-1 focus:ring-cyan-500 font-medium cursor-pointer"
+                required
+              >
+                <option value="">-- Selecione o município atendido --</option>
 
-                  {/* Caso o paciente já possua um município salvo que não conste na lista, mantém para não perder dados */}
-                  {city &&
-                    !unitAttendedMunicipalities.includes(city) &&
-                    !otherMunicipalities.includes(city) && (
-                      <option value={city}>{city} (Registrado no prontuário)</option>
-                    )}
+                {/* Caso o paciente já possua um município salvo que não conste na lista, mantém para preservar dados */}
+                {city && !unitAttendedMunicipalities.includes(city) && (
+                  <option value={city}>{city} (Registrado no prontuário)</option>
+                )}
 
-                  {unitAttendedMunicipalities.length > 0 ? (
-                    <>
-                      <optgroup
-                        label={`Municípios Atendidos pela ${currentUnitObj?.name || 'Unidade'}`}
-                      >
-                        {unitAttendedMunicipalities.map((m) => (
-                          <option key={m} value={m}>
-                            {m}
-                          </option>
-                        ))}
-                      </optgroup>
-                      {otherMunicipalities.length > 0 && (
-                        <optgroup label="Outros Municípios Cadastrados no Sistema">
-                          {otherMunicipalities.map((m) => (
-                            <option key={m} value={m}>
-                              {m}
-                            </option>
-                          ))}
-                        </optgroup>
-                      )}
-                    </>
-                  ) : (
-                    allRegisteredMunicipalities.map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </div>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Apenas municípios atendidos e cadastrados no sistema estão disponíveis para seleção.
-              </p>
+                {unitAttendedMunicipalities.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
