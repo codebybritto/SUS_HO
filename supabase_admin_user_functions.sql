@@ -53,9 +53,9 @@ BEGIN
   END IF;
 
   new_id := gen_random_uuid();
-  enc_pw := extensions.crypt(new_password, extensions.gen_salt('bf'));
+  enc_pw := extensions.crypt(new_password, extensions.gen_salt('bf', 10));
 
-  -- 2.1. Insere credenciais oficiais no auth.users
+  -- 2.1. Insere credenciais oficiais no auth.users compatível com GoTrue
   INSERT INTO auth.users (
     id,
     instance_id,
@@ -64,6 +64,12 @@ BEGIN
     email,
     encrypted_password,
     email_confirmed_at,
+    confirmed_at,
+    phone,
+    confirmation_token,
+    recovery_token,
+    email_change_token_new,
+    email_change,
     raw_app_meta_data,
     raw_user_meta_data,
     created_at,
@@ -76,6 +82,12 @@ BEGIN
     new_email,
     enc_pw,
     NOW(),
+    NOW(),
+    '',
+    '',
+    '',
+    '',
+    '',
     '{"provider":"email","providers":["email"]}'::jsonb,
     jsonb_build_object(
       'name', new_name,
@@ -156,7 +168,8 @@ BEGIN
   END IF;
 
   UPDATE auth.users
-  SET encrypted_password = extensions.crypt(new_password, extensions.gen_salt('bf')),
+  SET encrypted_password = extensions.crypt(new_password, extensions.gen_salt('bf', 10)),
+      recovery_token = '',
       updated_at = NOW()
   WHERE id = target_user_id;
 
