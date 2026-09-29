@@ -91,6 +91,7 @@ BEGIN
   -- 2.2. Insere na auth.identities para permitir login imediato por e-mail e senha
   INSERT INTO auth.identities (
     id,
+    provider_id,
     user_id,
     identity_data,
     provider,
@@ -98,7 +99,8 @@ BEGIN
     created_at,
     updated_at
   ) VALUES (
-    new_id,
+    gen_random_uuid(),
+    new_id::text,
     new_id,
     jsonb_build_object('sub', new_id::text, 'email', new_email),
     'email',
