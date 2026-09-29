@@ -417,12 +417,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const adminResetPassword = async (
     userId: string,
-    _newPassword: string,
+    newPassword: string,
     _forceChangeOnNextLogin: boolean
   ): Promise<boolean> => {
     if (isDemoMode) return false;
-    console.warn(`Redefinição de senha do usuário ${userId} deve ser feita pelo console do Supabase ou link seguro.`);
-    return true;
+    return await supabaseService.adminResetPassword(userId, newPassword);
   };
 
   const clearMustChangePasswordFlag = () => {

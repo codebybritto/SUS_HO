@@ -81,9 +81,9 @@ interface AppContextType {
   addDoctor: (doc: Omit<Doctor, 'id'>) => void;
   updateDoctor: (id: string, doc: Partial<Doctor>) => void;
   deleteDoctor: (id: string) => void;
-  addUser: (user: Omit<User, 'id' | 'createdAt'>) => void;
-  updateUser: (id: string, user: Partial<User>) => void;
-  deleteUser: (id: string) => void;
+  addUser: (user: Omit<User, 'id' | 'createdAt'> & { password?: string }) => Promise<void>;
+  updateUser: (id: string, user: Partial<User> & { password?: string }) => Promise<void>;
+  deleteUser: (id: string) => Promise<void>;
   updateSettings: (newSettings: Partial<SystemSettings>) => void;
   resetAllData: () => void;
 }
@@ -1391,71 +1391,104 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Users
-  const addUser = (userData: Omit<User, 'id' | 'createdAt'>) => {
+  const addUser = async (userData: Omit<User, 'id' | 'createdAt'> & { password?: string }) => {
     if (isDemoMode) {
-      console.warn('Criação de usuários bloqueada no modo demonstração');
+      alert('Criação de usuários bloqueada no modo demonstração');
       return;
     }
-    const newUser: User = {
-      ...userData,
-      id: `user-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-    };
-    setUsers((prev) => [...prev, newUser]);
-    if (isSupabaseConfigured()) {
-      supabaseService.upsertUser(newUser).catch(console.warn);
+
+    try {
+      const created = await supabaseService.createUser({
+        name: userData.name,
+        login: userData.login,
+        email: userData.email || `${userData.login}@gestao.saude.rj.gov.br`,
+        password: userData.password || 'Saude2026@',
+        role: userData.role,
+        unitIds: userData.unitIds,
+        permissions: userData.permissions,
+        active: userData.active ?? true,
+      });
+
+      if (!created) {
+        throw new Error('Falha ao registrar usuário no Supabase Auth e perfis.');
+      }
+
+      setUsers((prev) => {
+        const next = [...prev.filter((u) => u.id !== created.id), created];
+        storageService.saveUsers(next);
+        return next;
+      });
+
+      logAudit({
+        action: 'ADMIN_CHANGE',
+        entityType: 'user',
+        entityId: created.id,
+        entityLabel: created.name,
+        description: `Novo usuário cadastrado no Supabase Auth: ${created.name} (${created.login}) com perfil ${created.role}`,
+      });
+    } catch (err: any) {
+      console.error('Erro ao adicionar usuário:', err);
+      alert(`Erro ao cadastrar usuário: ${err.message || 'Erro desconhecido'}`);
+      throw err;
     }
-    logAudit({
-      action: 'ADMIN_CHANGE',
-      entityType: 'user',
-      entityId: newUser.id,
-      entityLabel: newUser.name,
-      description: `Novo usuário cadastrado: ${newUser.name} (${newUser.login}) com perfil ${newUser.role}`,
-    });
   };
 
-  const updateUser = (id: string, userData: Partial<User>) => {
+  const updateUser = async (id: string, userData: Partial<User> & { password?: string }) => {
     if (isDemoMode) {
-      console.warn('Edição de usuários bloqueada no modo demonstração');
+      alert('Edição de usuários bloqueada no modo demonstração');
       return;
     }
-    setUsers((prev) =>
-      prev.map((u) => {
-        if (u.id !== id) return u;
-        const updated = { ...u, ...userData };
-        if (isSupabaseConfigured()) {
-          supabaseService.upsertUser(updated).catch(console.warn);
-        }
-        logAudit({
-          action: 'ADMIN_CHANGE',
-          entityType: 'user',
-          entityId: id,
-          entityLabel: updated.name,
-          description: `Dados do usuário ${updated.name} (${updated.login}) alterados`,
-        });
-        return updated;
-      })
-    );
-  };
 
-  const deleteUser = (id: string) => {
-    if (isDemoMode) {
-      console.warn('Exclusão de usuários bloqueada no modo demonstração');
-      return;
-    }
-    const user = users.find((u) => u.id === id);
-    setUsers((prev) => prev.filter((u) => u.id !== id));
-    if (isSupabaseConfigured()) {
-      supabaseService.deleteUser(id).catch(console.warn);
-    }
-    if (user) {
+    try {
+      const updated = await supabaseService.updateUser({ id, ...userData });
+      const targetUser = updated || { ...(users.find((u) => u.id === id) as User), ...userData };
+
+      setUsers((prev) => {
+        const next = prev.map((u) => (u.id === id ? targetUser : u));
+        storageService.saveUsers(next);
+        return next;
+      });
+
       logAudit({
         action: 'ADMIN_CHANGE',
         entityType: 'user',
         entityId: id,
-        entityLabel: user.name,
-        description: `Usuário ${user.name} excluído do sistema`,
+        entityLabel: targetUser.name,
+        description: `Dados do usuário ${targetUser.name} (${targetUser.login}) alterados`,
       });
+    } catch (err: any) {
+      console.error('Erro ao atualizar usuário:', err);
+      alert(`Erro ao atualizar usuário: ${err.message || 'Erro desconhecido'}`);
+      throw err;
+    }
+  };
+
+  const deleteUser = async (id: string) => {
+    if (isDemoMode) {
+      alert('Exclusão de usuários bloqueada no modo demonstração');
+      return;
+    }
+    const user = users.find((u) => u.id === id);
+    try {
+      await supabaseService.deleteUser(id);
+      setUsers((prev) => {
+        const next = prev.filter((u) => u.id !== id);
+        storageService.saveUsers(next);
+        return next;
+      });
+      if (user) {
+        logAudit({
+          action: 'ADMIN_CHANGE',
+          entityType: 'user',
+          entityId: id,
+          entityLabel: user.name,
+          description: `Usuário ${user.name} excluído do sistema`,
+        });
+      }
+    } catch (err: any) {
+      console.error('Erro ao excluir usuário:', err);
+      alert(`Erro ao excluir usuário: ${err.message || 'Erro desconhecido'}`);
+      throw err;
     }
   };
 

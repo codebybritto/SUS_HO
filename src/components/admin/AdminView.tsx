@@ -775,11 +775,11 @@ export const AdminView: React.FC = () => {
           user={editingUser}
           units={units}
           onClose={() => setIsUserModalOpen(false)}
-          onSave={(userData) => {
+          onSave={async (userData) => {
             if (editingUser) {
-              updateUser(editingUser.id, userData);
+              await updateUser(editingUser.id, userData);
             } else {
-              addUser(userData as any);
+              await addUser(userData as any);
             }
             setIsUserModalOpen(false);
           }}
@@ -886,15 +886,16 @@ const UserModal: React.FC<{
   user: User | null;
   units: Unit[];
   onClose: () => void;
-  onSave: (data: Partial<User>) => void;
+  onSave: (data: Partial<User> & { password?: string }) => Promise<void> | void;
 }> = ({ isOpen, user, units, onClose, onSave }) => {
   const [name, setName] = useState(user?.name || '');
   const [login, setLogin] = useState(user?.login || '');
-  const [password, setPassword] = useState(user?.password || '123');
+  const [password, setPassword] = useState(user ? '' : 'Saude2026@');
   const [role, setRole] = useState<UserRole>(user?.role || 'attendant');
   const [active, setActive] = useState(user?.active ?? true);
   const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>(user?.unitIds || [units[0]?.id || '']);
   const [mustChangePassword, setMustChangePassword] = useState(user?.mustChangePassword ?? false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [permissions, setPermissions] = useState<UserPermissions>(
     user?.permissions || {
@@ -929,10 +930,14 @@ const UserModal: React.FC<{
     setPermissions((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !login.trim()) {
       alert('Nome e Login são campos obrigatórios.');
+      return;
+    }
+    if (!user && password.trim().length < 6) {
+      alert('A senha de acesso inicial deve conter no mínimo 6 caracteres.');
       return;
     }
     if (selectedUnitIds.length === 0) {
@@ -940,38 +945,43 @@ const UserModal: React.FC<{
       return;
     }
 
-    onSave({
-      name: name.trim(),
-      login: login.trim().toLowerCase(),
-      password,
-      role,
-      active,
-      mustChangePassword,
-      unitIds: selectedUnitIds,
-      permissions:
-        role === 'admin'
-          ? {
-              view_patients: true,
-              create_patients: true,
-              edit_patients: true,
-              delete_patients: true,
-              edit_after_creation: true,
-              record_evolution: true,
-              record_contact_attempt: true,
-              change_patient_status: true,
-              manage_procedures: true,
-              manage_doctors: true,
-              manage_municipalities: true,
-              view_timeline: true,
-              view_logs: true,
-              view_reports: true,
-              export_reports: true,
-              manage_users: true,
-              manage_units: true,
-              manage_settings: true,
-            }
-          : permissions,
-    });
+    setIsSubmitting(true);
+    try {
+      await onSave({
+        name: name.trim(),
+        login: login.trim().toLowerCase(),
+        ...(password.trim() ? { password: password.trim() } : {}),
+        role,
+        active,
+        mustChangePassword,
+        unitIds: selectedUnitIds,
+        permissions:
+          role === 'admin'
+            ? {
+                view_patients: true,
+                create_patients: true,
+                edit_patients: true,
+                delete_patients: true,
+                edit_after_creation: true,
+                record_evolution: true,
+                record_contact_attempt: true,
+                change_patient_status: true,
+                manage_procedures: true,
+                manage_doctors: true,
+                manage_municipalities: true,
+                view_timeline: true,
+                view_logs: true,
+                view_reports: true,
+                export_reports: true,
+                manage_users: true,
+                manage_units: true,
+                manage_settings: true,
+              }
+            : permissions,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const permissionLabels: { key: keyof UserPermissions; label: string }[] = [
@@ -1026,12 +1036,16 @@ const UserModal: React.FC<{
               />
             </div>
             <div>
-              <label className="block text-slate-700 font-semibold mb-1">Senha</label>
+              <label className="block text-slate-700 font-semibold mb-1">
+                {user ? 'Nova Senha (opcional)' : 'Senha de Acesso * (mín. 6 dígitos)'}
+              </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                placeholder={user ? 'Manter senha atual' : 'Ex: Saude2026@'}
                 className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 font-mono"
+                required={!user}
               />
             </div>
             <div>
@@ -1129,9 +1143,11 @@ const UserModal: React.FC<{
             </button>
             <button
               type="submit"
-              className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-xs transition-colors"
+              disabled={isSubmitting}
+              className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
             >
-              Salvar Usuário
+              {isSubmitting && <span className="animate-spin text-sm">⏳</span>}
+              {isSubmitting ? 'Salvando...' : user ? 'Salvar Usuário' : 'Criar Operador'}
             </button>
           </div>
         </form>

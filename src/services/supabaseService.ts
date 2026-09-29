@@ -5,6 +5,8 @@ import {
   Procedure,
   Doctor,
   User,
+  UserRole,
+  UserPermissions,
   AuditLog,
   SystemSettings,
   Municipality,
@@ -435,66 +437,228 @@ export const supabaseService = {
     return null;
   },
 
-  async upsertUser(u: User): Promise<boolean> {
-    if (!supabase || !isSupabaseConfigured()) return false;
+  async createUser(u: {
+    name: string;
+    login: string;
+    email?: string;
+    password?: string;
+    role: UserRole;
+    unitIds: string[];
+    permissions: UserPermissions;
+    active?: boolean;
+  }): Promise<User | null> {
+    if (!supabase || !isSupabaseConfigured()) return null;
 
-    // Tenta atualizar/inserir em profiles
+    const session = (await supabase.auth.getSession()).data.session;
+    const token = session?.access_token;
+
+    // 1. Tenta via Endpoint /api/admin-users (Vercel Serverless / Vite Dev Middleware)
     try {
-      await supabase.from('profiles').upsert({
-        id: u.id,
-        name: u.name,
-        login: u.login,
-        role: u.role,
-        active: u.active,
-        unit_ids: u.unitIds || [],
-        permissions: u.permissions,
-        email: u.email || `${u.login}@gestao.saude.rj.gov.br`,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'id' });
+      const res = await fetch('/api/admin-users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(u),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        return {
+          id: data.id,
+          name: data.name,
+          login: data.login,
+          email: data.email,
+          role: data.role,
+          unitIds: data.unitIds || [],
+          permissions: data.permissions || {},
+          active: data.active,
+          createdAt: data.createdAt,
+        };
+      }
+
+      const errData = await res.json().catch(() => null);
+      if (res.status === 400 || res.status === 403) {
+        throw new Error(errData?.error || 'Erro ao cadastrar usuário.');
+      }
+    } catch (fetchErr: any) {
+      if (fetchErr.message && !fetchErr.message.includes('fetch') && !fetchErr.message.includes('Failed')) {
+        throw fetchErr;
+      }
+    }
+
+    // 2. Fallback via PostgreSQL RPC 'admin_create_user' (se configurado no Supabase)
+    try {
+      const { data: rpcData, error: rpcErr } = await supabase.rpc('admin_create_user', {
+        new_name: u.name,
+        new_login: u.login,
+        new_email: u.email || `${u.login}@gestao.saude.rj.gov.br`,
+        new_password: u.password || 'Saude2026@',
+        new_role: u.role,
+        new_unit_ids: u.unitIds || [],
+        new_permissions: u.permissions || {},
+      });
+
+      if (!rpcErr && rpcData) {
+        return {
+          id: rpcData.id,
+          name: rpcData.name,
+          login: rpcData.login,
+          email: rpcData.email,
+          role: rpcData.role,
+          unitIds: rpcData.unit_ids || [],
+          permissions: rpcData.permissions || {},
+          active: rpcData.active,
+          createdAt: rpcData.created_at,
+        };
+      }
+      if (rpcErr) {
+        throw new Error(rpcErr.message);
+      }
+    } catch (rpcCatch: any) {
+      throw rpcCatch;
+    }
+
+    return null;
+  },
+
+  async updateUser(u: Partial<User> & { id: string; password?: string }): Promise<User | null> {
+    if (!supabase || !isSupabaseConfigured()) return null;
+
+    const session = (await supabase.auth.getSession()).data.session;
+    const token = session?.access_token;
+
+    // 1. Tenta via API Serverless / Dev Middleware
+    try {
+      const res = await fetch('/api/admin-users', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(u),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        return {
+          id: data.id,
+          name: data.name,
+          login: data.login,
+          email: data.email,
+          role: data.role,
+          unitIds: data.unitIds || [],
+          permissions: data.permissions || {},
+          active: data.active,
+          createdAt: data.createdAt,
+        };
+      }
     } catch {}
 
-    // Mantém compatibilidade com system_users sem senha
-    const { error } = await supabase.from('system_users').upsert({
-      id: u.id,
-      name: u.name,
-      login: u.login,
-      role: u.role,
-      active: u.active,
-      unit_ids: u.unitIds || [],
-      permissions: u.permissions,
-      email: u.email,
-      created_at: u.createdAt,
-      last_login_at: u.lastLoginAt || null,
-      must_change_password: Boolean(u.mustChangePassword),
-    });
-    return !error;
+    // 2. Fallback direto via Supabase client (RLS permite que admin atualize perfis)
+    const updateFields: any = {
+      updated_at: new Date().toISOString(),
+    };
+    if (u.name) updateFields.name = u.name;
+    if (u.role) updateFields.role = u.role;
+    if (u.unitIds) updateFields.unit_ids = u.unitIds;
+    if (u.permissions) updateFields.permissions = u.permissions;
+    if (typeof u.active === 'boolean') updateFields.active = u.active;
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(updateFields)
+      .eq('id', u.id)
+      .select()
+      .single();
+
+    if (error || !data) return null;
+
+    return {
+      id: data.id,
+      name: data.name,
+      login: data.login,
+      email: data.email,
+      role: data.role,
+      unitIds: data.unit_ids || [],
+      permissions: data.permissions || {},
+      active: data.active,
+      createdAt: data.created_at,
+    };
+  },
+
+  async adminResetPassword(userId: string, newPassword: string): Promise<boolean> {
+    if (!supabase || !isSupabaseConfigured()) return false;
+
+    const session = (await supabase.auth.getSession()).data.session;
+    const token = session?.access_token;
+
+    // 1. Tenta via API Serverless
+    try {
+      const res = await fetch('/api/admin-users', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ id: userId, newPassword }),
+      });
+
+      if (res.ok) return true;
+    } catch {}
+
+    // 2. Fallback via RPC admin_reset_user_password
+    try {
+      const { error: rpcErr } = await supabase.rpc('admin_reset_user_password', {
+        target_user_id: userId,
+        new_password: newPassword,
+      });
+      if (!rpcErr) return true;
+    } catch {}
+
+    return false;
+  },
+
+  async upsertUser(u: User): Promise<boolean> {
+    const updated = await this.updateUser(u);
+    return !!updated;
   },
 
   async upsertUsers(users: User[]): Promise<boolean> {
     if (!supabase || !isSupabaseConfigured() || users.length === 0) return false;
-    const rows = users.map((u) => ({
-      id: u.id,
-      name: u.name,
-      login: u.login,
-      role: u.role,
-      active: u.active,
-      unit_ids: u.unitIds || [],
-      permissions: u.permissions,
-      email: u.email,
-      created_at: u.createdAt,
-      last_login_at: u.lastLoginAt || null,
-      must_change_password: Boolean(u.mustChangePassword),
-    }));
-    const { error } = await supabase.from('system_users').upsert(rows, { onConflict: 'id' });
-    return !error;
+    for (const u of users) {
+      await this.upsertUser(u);
+    }
+    return true;
   },
 
   async deleteUser(id: string): Promise<boolean> {
     if (!supabase || !isSupabaseConfigured()) return false;
+
+    const session = (await supabase.auth.getSession()).data.session;
+    const token = session?.access_token;
+
+    // 1. Tenta via API Serverless
     try {
-      await supabase.from('profiles').delete().eq('id', id);
+      const res = await fetch(`/api/admin-users?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (res.ok) return true;
     } catch {}
-    const { error } = await supabase.from('system_users').delete().eq('id', id);
+
+    // 2. Fallback via RPC admin_delete_user
+    try {
+      const { error: rpcErr } = await supabase.rpc('admin_delete_user', { target_user_id: id });
+      if (!rpcErr) return true;
+    } catch {}
+
+    // 3. Fallback direto via profiles delete
+    const { error } = await supabase.from('profiles').delete().eq('id', id);
     return !error;
   },
 
