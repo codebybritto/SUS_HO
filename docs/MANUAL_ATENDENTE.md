@@ -4,132 +4,131 @@
 ---
 
 ## 🎯 Objetivo
-Este guia foi feito para você, **Atendente**. Ele ensina, passo a passo e com imagens, como realizar os cadastros, localizar pacientes, registrar contatos telefônicos e atualizar a situação de cada paciente.
+Este guia foi feito para você, **Atendente**. Ele ensina, passo a passo e com imagens reais do sistema, como realizar os cadastros, localizar pacientes, registrar contatos telefônicos e atualizar a situação de cada paciente.
 
 ---
 
 ## 🔑 1. Acesso e Primeiro Login
 
-1. Abra o navegador e digite o endereço do sistema.
-2. Digite seu **Usuário** e sua **Senha provisória** fornecida pela coordenação.
+1. Abra o navegador e acesse o endereço do sistema.
+2. Digite seu **Operador / Usuário** e sua **Senha**.
 3. Clique no botão azul **Acessar o Sistema**.
 
+![Tela de Acesso ao Sistema](./imagens/tela_login.png)
+
 > 💡 **Importante — Troca Obrigatória de Senha**:
-> Se for o seu primeiro acesso, uma janela solicitará que você crie sua nova senha pessoal. Escolha uma senha segura de no mínimo 4 dígitos e guarde-a com você.
+> Se for o seu primeiro acesso ou se sua senha foi resetada pela coordenação, o sistema solicitará que você cadastre uma nova senha pessoal antes de prosseguir. Guarde sua senha com segurança.
 
 > ⏱️ **Segurança Automática**:
-> Se você ficar **15 minutos** sem mexer no sistema, ele sairá automaticamente para proteger os dados dos pacientes. Basta digitar sua senha novamente para continuar.
+> Se você ficar **15 minutos** sem mexer no sistema, ele sairá automaticamente para proteger os dados clínicos dos pacientes. Basta digitar sua senha novamente para continuar.
 
 ---
 
 ## 🏥 2. Selecionando sua Unidade de Atendimento
 
-No topo da tela, na barra azul escura:
+No topo da tela, na barra superior escura:
 - Clique no seletor com o ícone de prédio (**Unidade de Atendimento**).
 - Escolha a sua unidade (ex: **Unidade Lagos**, **São João de Meriti** ou **Magé**).
-- O sistema filtrará imediatamente os pacientes da sua região.
+- O sistema filtrará imediatamente os dados e pacientes da sua região.
 
 ---
 
 ## 📊 3. Entendendo o Painel Principal (Dashboard)
 
-Ao entrar no sistema, você verá o painel com **6 cartões coloridos**:
+Ao entrar no sistema, você verá o painel com **6 cartões coloridos** e os gráficos de acompanhamento:
 
-![Visão do Painel Principal (Dashboard)](./imagens/tela_dashboard.jpg)
+![Visão do Painel Principal (Dashboard)](./imagens/tela_dashboard.png)
 
 ### O que significa cada cartão:
 | Cartão | Cor | O que indica? | O que você deve fazer? |
 | :--- | :---: | :--- | :--- |
-| **Total Pacientes** | 🔵 Azul | Total de pacientes cadastrados na unidade. | Visão geral da fila. |
-| **Agendados** | 🔷 Ciano | Pacientes que já têm data de cirurgia/exame marcada. | Acompanhar confirmações. |
-| **Regulados** | 🟢 Verde | Pacientes autorizados pela regulação médica. | Prontos para agendamento. |
-| **Aguardando Micrologos** | 🟡 Amarelo | Pacientes que **faltaram 2 vezes** ou tiveram **3 ligações sem sucesso**. | Aguardam ação da supervisão/posto de saúde. |
-| **Sem Interação** | 🔴 Rosa | Pacientes novos que **nunca receberam nenhuma ligação**. | **Sua prioridade diária de contato!** |
-| **Casos Urgentes** | 🚨 Vermelho | Pacientes com urgência médica imediata. | Prioridade máxima de agendamento. |
+| **TOTAL** | 🔵 Azul | Total de pacientes no recorte selecionado. | Visão geral da fila regulada. |
+| **AGENDADOS** | 🔷 Ciano | Pacientes que já têm data de cirurgia/exame confirmada. | Acompanhar confirmações de comparecimento. |
+| **REGULADOS** | 🟢 Verde | Pacientes autorizados pela regulação médica. | Prioridade para agendamento. |
+| **MICROLOGOS** | 🟡 Amarelo | Pacientes com **2 faltas** ou **3 ligações sem sucesso**. | Aguardam ação com a coordenação/posto de saúde. |
+| **SEM INTERAÇÃO** | 🔴 Rosa | Pacientes novos que **nunca receberam nenhuma ligação**. | **Sua prioridade diária de contato ativo!** |
+| **CASOS URGENTES** | 🚨 Vermelho | Pacientes com solicitação médica de urgência prioritária. | Prioridade máxima no fluxo. |
 
-> 👆 **Dica de Ouro**: Você pode **clicar em cima de qualquer cartão** e o sistema abrirá a lista filtrada apenas com aqueles pacientes!
+> 👆 **Dica**: Você pode navegar para a aba **Pacientes** para ver a lista completa e aplicar filtros adicionais.
 
 ---
 
 ## 📝 4. Como Cadastrar um Novo Paciente
 
-Para cadastrar um paciente que chegou com encaminhamento:
-1. No menu superior, clique no botão azul **+ Novo Paciente**.
-2. A janela de cadastro será aberta:
+Para cadastrar um paciente com encaminhamento ambulatorial:
+1. No menu superior, clique no botão azul **+ Cadastrar Paciente**.
+2. A janela de cadastro oficial será aberta:
 
-![Formulário de Cadastro de Paciente](./imagens/tela_cadastro.jpg)
+![Formulário de Cadastro de Paciente](./imagens/tela_cadastro.png)
 
-### Preencha em 3 etapas simples:
+### Preencha os campos organizados:
 
-#### 🔹 Etapa 1: Dados Pessoais
-- **Nome Completo**: Digite o nome completo sem abreviações.
-- **Data de Nascimento**: O sistema calcula a idade na hora.
-- **CPF** e **Cartão SUS**: Digite os números dos documentos.
-- **Telefone Principal**: DDD + Número com WhatsApp (ex: `(22) 99876-5432`). **Confirme se o número está correto!**
-- **Telefone Secundário / Recado**: Telefone de um parente ou vizinho.
-
-#### 🔹 Etapa 2: Unidade e Município de Atendimento
-- **Unidade de Atendimento**: Selecione a sua unidade (ex: `Unidade Lagos`).
+#### 🔹 1. Unidade e Município de Atendimento
+- **Unidade Responsável**: Selecione a sua unidade (ex: `Unidade Lagos (São Pedro da Aldeia)`).
 - **Município de Atendimento**:
-  - O sistema mostra **apenas os municípios atendidos pela sua unidade**.
-  - *Exemplo*: Na Unidade Lagos só aparecerão: `Armação dos Búzios`, `São Pedro da Aldeia` e `Arraial do Cabo`.
+  - O sistema lista **apenas os municípios atendidos pela sua unidade**.
+  - *Exemplo*: Na Unidade Lagos, aparecem exclusivamente: `Armação dos Búzios`, `São Pedro da Aldeia` e `Arraial do Cabo`.
 
-#### 🔹 Etapa 3: Dados Clínicos do Olho
-- **Procedimento Solicitado**: Escolha o procedimento (ex: `Facectomia com Implante de LIO (Catarata)`).
-- **Olho a ser operado**:
-  - `OD` = Olho Direito
-  - `OE` = Olho Esquerdo
-  - `AO` = Ambos os Olhos
-- **Médico Solicitante**: Escolha o oftalmologista do pedido (o CRM aparece sozinho).
-- **Marcar como Caso Urgente**: Marque a caixinha vermelha apenas se o pedido médico tiver carimbo de urgência.
-- Clique em **Salvar Paciente**. Pronto! O paciente já está na fila oficial.
+#### 🔹 2. Dados do Paciente
+- **Nome Completo do Paciente**: Digite o nome completo sem abreviações.
+- **Data de Nascimento**: O sistema calcula a idade automaticamente.
+
+#### 🔹 3. Procedimento e Dados Clínicos
+- **Procedimento Oftalmológico**: Selecione o procedimento solicitado (ex: `Facectomia sem implante de lente intraocular` ou `Capsulotomia a YAG Laser`).
+- **Olho Solicitado**: Selecione `OD` (Direito), `OE` (Esquerdo) ou `AO` (Ambos).
+- **Data Solicitada / Encaminhamento**: Informe a data indicada no pedido do médico.
+- **Médico Solicitante**: Selecione o oftalmologista que emitiu o laudo.
+- **Condição / Status Inicial**: Padrão `Aguardando Contato`.
+- **Classificar como URGENTE**: Marque a caixinha caso haja indicação médica expressa de urgência.
+- Clique em **Cadastrar Paciente** para salvar.
 
 ---
 
-## 📞 5. Rotina Diária: Como Registrar Ligações e Contatos
+## 📞 5. Rotina Diária: Registro de Tentativas de Contato
 
-Na aba **Pacientes**, localize o paciente pelo nome ou CPF e clique no botão **Contato** (ícone de telefone):
+Na aba **Pacientes**, localize o paciente e clique no botão de **Contato** (ícone de telefone):
 
-![Registro de Tentativa de Contato Telefônico](./imagens/tela_contato.jpg)
+![Registro de Tentativa de Contato Telefônico](./imagens/tela_contato.png)
 
 ### Passo a passo para registrar a ligação:
-1. Escolha o **Canal de Contato**: Telefone Principal, WhatsApp ou Recado.
-2. Selecione o **Resultado da Chamada**:
-   - `Contato Efetivo`: O paciente atendeu e confirmou as informações.
-   - `Não Atende`: Tocou até cair.
-   - `Linha Ocupada`: Telefone deu sinal de ocupado.
-   - `Caixa Postal / Inexistente`: Número desligado ou inexistente.
-   - `Recado com Terceiro`: Falou com familiar ou vizinho.
-3. Escreva nas **Anotações da Ligação** um resumo rápido (ex: *"Paciente confirmou que comparecerá dia 15 acompanhado da filha"*).
-4. Clique em **Salvar Contato**.
+1. O sistema mostra o número da tentativa (ex: *1ª Tentativa*, *2ª Tentativa* ou *3ª Tentativa*).
+2. Confira a **Data da Ligação/Contato** e o **Horário**.
+3. Selecione o **Canal de Comunicação**:
+   - `Ligação Telefônica`
+   - `WhatsApp`
+   - `Recado Familiar`
+   - `Agente Comunitário`
+   - `Outro Meio`
+4. Selecione o **Resultado da Tentativa**:
+   - `Contato com Sucesso - Agendamento Confirmado`
+   - `Contato com Sucesso - Paciente Recusou / Desistiu`
+   - `Contato com Sucesso - Paciente Informou Doença`
+   - `Sem Resposta / Chamou até cair`
+   - `Número Ocupado`
+   - `Caixa Postal`
+   - `Número Inexistente / Errado`
+   - `Recado Deixado com Terceiro`
+5. Escreva nas **Observações / Detalhes** as informações relevantes.
+6. Clique no botão verde **Salvar Tentativa**.
 
 > ⚠️ **Atenção — Regra Automática**:
-> Se você registrar **3 ligações sem sucesso seguidas** para o mesmo paciente, o sistema moverá ele sozinho para **Aguardando Micrologos** e avisará a supervisora para acionar o posto de saúde!
+> Ao atingir **3 tentativas sem sucesso seguidas**, o sistema move o paciente automaticamente para o status **Aguardando Micrologos** para que a supervisão tome providências junto ao município de origem.
 
 ---
 
-## ❌ 6. Como Registrar uma Falta
+## ❌ 6. Como Registrar Faltas e Justificativas
 
-Se o paciente não compareceu à consulta ou ao procedimento:
-1. Na lista de pacientes, clique em **Registrar Falta**.
-2. Informe a **Data da Falta** e se o paciente justificou (ex: apresentou atestado médico).
-3. Escreva o motivo e clique em **Confirmar**.
+Se o paciente faltar a uma consulta agendada ou ao procedimento cirúrgico:
+1. Na lista de pacientes, acione o registro de falta.
+2. Indique se houve apresentação de atestado ou justificativa plausível.
+3. Descreva o motivo no campo de texto.
+4. Salve o registro.
 
-> ⚠️ **Atenção — Regra das 2 Faltas**:
-> Se o paciente tiver **2 faltas**, o sistema automaticamente mudará o status para **Aguardando Micrologos**.
-
----
-
-## 🩺 7. Como Registrar uma Evolução / Mudar o Status
-
-Quando o paciente trouxer exames, passar por avaliação ou mudar de condição:
-1. Clique no botão **Evolução** na linha do paciente.
-2. Selecione a situação (ex: *Exames Pré-operatórios OK*, *Aguardando Risco Cirúrgico*, *Desistência*).
-3. Se o status geral mudou, selecione o novo (ex: de *Aguardando Contato* para *Agendado*).
-4. Digite a anotação e clique em **Salvar Evolução**.
+> ⚠️ **Regra das 2 Faltas**:
+> Com **2 faltas registradas**, o paciente vai automaticamente para **Aguardando Micrologos**.
 
 ---
 
-## 📜 8. Como Consultar o Histórico (Prontuário)
-- Basta clicar em cima do **Nome do Paciente** em qualquer tabela.
-- Você verá a ficha cadastral completa e a **Linha do Tempo**, com o dia e hora exatos de todas as ligações, cadastros e anotações feitas para aquele paciente.
+## 📜 7. Prontuário e Linha do Tempo
+
+- Ao clicar no nome do paciente, você visualiza a **Linha do Tempo** auditada de todas as ações: data do cadastro, ligações realizadas, evoluções registradas e nomes das atendentes responsáveis por cada contato.

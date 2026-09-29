@@ -4,83 +4,94 @@
 ---
 
 ## 🎯 Objetivo
-Este guia foi feito para o **Administrador do Sistema**. Ele explica, de forma simples e ilustrada, como gerenciar usuários, cadastrar polos e municípios, resetar senhas e calibrar as regras automáticas do sistema.
+Este guia foi preparado para o **Administrador do Sistema**. Ele explica, de forma simples e com imagens reais do sistema em execução, como gerenciar usuários, cadastrar polos e municípios de abrangência, resetar senhas e calibrar as regras automáticas de regulação.
 
 ---
 
-## 👥 1. Gestão de Usuários e Senhas
+## 🔑 1. Acesso e Autenticação
 
-Na aba **Administração** -> sub-aba **Usuários**:
+1. Acesse o sistema pelo navegador.
+2. Informe suas credenciais de Administrador institucional.
+3. Clique em **Acessar o Sistema**.
 
-![Gestão de Usuários e Reset de Senha](./imagens/tela_admin.jpg)
+![Tela de Acesso ao Sistema](./imagens/tela_login.png)
 
-### 1.1. Como Cadastrar um Novo Usuário
+---
+
+## 👥 2. Gestão de Usuários, Acessos e Senhas
+
+Na aba **Administração** -> sub-aba **Usuários & Permissões**:
+
+![Gestão de Usuários e Permissões](./imagens/tela_admin.png)
+
+### 2.1. Como Cadastrar um Novo Usuário
 1. Clique no botão azul **+ Novo Usuário**.
-2. Preencha:
-   - **Nome Completo**: Nome do profissional.
-   - **Login de Acesso**: Identificador institucional único (ex: `herika.quaresma` ou `marina.costa`).
-   - **E-mail**: Preenchido automaticamente com `@gestao.saude.rj.gov.br`.
-   - **Senha Provisória**: Digite uma senha temporária inicial.
+2. Preencha as informações:
+   - **Nome Completo**: Nome da atendente ou supervisora.
+   - **Login de Acesso**: Identificador único do operador (ex: `herika.quaresma`, `ana.sales`).
+   - **E-mail**: Preenchido automaticamente com domínio `@gestao.saude.rj.gov.br`.
+   - **Senha Provisória**: Digite a senha inicial de acesso.
    - **Perfil (Role)**: Escolha `Atendente`, `Supervisora` ou `Administrador`.
-   - **Unidades Autorizadas**: Marque quais polos o usuário pode ver (ex: marcar apenas *Unidade Lagos* para funcionários daquela unidade).
-   - ✅ **Obrigar troca de senha no próximo login**: **Deixe sempre marcado!** Assim, no primeiro acesso, o sistema força o usuário a criar sua senha pessoal própria.
-3. Clique em **Salvar Usuário**. A conta é criada na hora no banco de dados **Supabase Auth**.
+   - **Unidades Autorizadas**: Selecione quais polos o usuário terá acesso (ex: `POLO-LAGOS`, `POLO-SJM`, `POLO-MAGE`).
+   - ✅ **Obrigar troca de senha no próximo login**: Deixe sempre ativado para novos operadores, garantindo sigilo individual.
+3. Clique em **Salvar Usuário**. O registro é integrado imediatamente com o serviço de autenticação do **Supabase Auth**.
 
-### 1.2. Como Resetar a Senha de um Usuário
-Se um atendente ou supervisora esquecer a senha:
-1. Na lista de usuários, clique no botão **Resetar Senha** (ícone de chave).
-2. Clique no botão **Gerar Senha Segura** (o sistema cria uma senha forte aleatória, ex: `#EWrkebu`).
-3. Marque a caixinha **Obrigar o usuário a trocar esta senha no próximo login**.
-4. Clique em **Confirmar Reset**.
-5. Copie a senha e passe para o usuário. Ao logar, o sistema pedirá que ele digite uma nova senha definitiva.
+### 2.2. Como Resetar a Senha de um Colaborador
+Caso um usuário esqueça sua senha:
+1. Localize o usuário na tabela de operadores.
+2. Clique no ícone de chave (**Resetar Senha**).
+3. Utilize a função de **Gerar Senha Segura** para criar uma credencial temporária forte.
+4. Mantenha marcada a opção **Obrigar o usuário a trocar esta senha no próximo login**.
+5. Clique em **Confirmar Reset** e repasse a senha temporária ao colaborador de forma reservada.
 
-### 1.3. Desativando um Acesso
-Se um colaborador sair da equipe ou for transferido:
-- Clique em **Editar** no usuário e desmarque a opção **Usuário Ativo**.
-- O login dele é bloqueado imediatamente, mantendo todo o histórico de ações salvo para auditoria.
+### 2.3. Desativação de Usuários
+- Se um operador for desligado da operação ou transferido, basta editar o registro e desmarcar **Ativo**. O acesso é revogado na hora, sem apagar o histórico de auditoria das ações que ele realizou.
 
 ---
 
-## 🏥 2. Gestão de Unidades de Saúde e Municípios
+## 🏥 3. Unidades de Saúde e Abrangência Municipal
 
-Na sub-aba **Unidades**:
+Na sub-aba **Unidades de Saúde** e na tela de cadastro:
 
-![Configuração de Unidades e Abrangência](./imagens/tela_cadastro.jpg)
+![Cadastro com Municípios Filtrados por Unidade](./imagens/tela_cadastro.png)
 
-### Como configurar os Polos e Municípios Atendidos:
-1. Cada unidade representa um polo físico (ex: **Unidade Lagos**, **São João de Meriti**, **Magé**).
-2. Ao editar ou criar a unidade, você define o campo **Municípios Atendidos**:
-   - Para a **Unidade Lagos**: Selecione `Armação dos Búzios`, `São Pedro da Aldeia` e `Arraial do Cabo`.
-   - Para **São João de Meriti**: Selecione `São João de Meriti`.
-   - Para **Magé**: Selecione `Magé`.
-3. Essa configuração garante que, quando o atendente estiver registrando um paciente ou tirando relatórios, **apenas os municípios daquela unidade fiquem disponíveis**.
+### Como funciona a restrição de municípios:
+1. Cada unidade de saúde possui uma lista oficial de municípios conveniados:
+   - **Unidade Lagos**: `Armação dos Búzios`, `São Pedro da Aldeia` e `Arraial do Cabo`.
+   - **Unidade São João de Meriti**: `São João de Meriti`.
+   - **Unidade Magé**: `Magé`.
+2. Essa parametrização garante que, no momento em que a atendente abre o formulário de cadastro ou na emissão de relatórios, o campo **Município de Atendimento** traga unicamente as cidades autorizadas para aquele polo.
 
 ---
 
-## ⚡ 3. Parametrização das Regras Automáticas
+## ⚡ 4. Parametrização das Regras Automáticas de Regulação
 
-Na sub-aba **Regras e Parâmetros**, você ajusta como o sistema automatiza a regulação:
+O sistema opera com regras automáticas configuráveis para evitar pacientes represados na fila:
 
-| Regra Automática | Padrão Recomendado | O que acontece quando atingido? |
+| Regra Automática | Parâmetro Recomendado | Ação do Sistema |
 | :--- | :---: | :--- |
-| **Limite de Faltas** | **2 faltas** | O paciente é transferido sozinho para **Aguardando Micrologos** para que a supervisão avalie o caso. |
-| **Tentativas de Contato sem Êxito** | **3 tentativas** | O paciente é transferido sozinho para **Aguardando Micrologos** para acionamento do agente comunitário de saúde. |
-| **Intervalo de Retorno Cirúrgico** | **7 a 15 dias** | Alerta no prontuário para agendamento do exame de pós-operatório. |
+| **Limite de Faltas** | **2 faltas** | O paciente é transferido automaticamente para **Aguardando Micrologos** para que a supervisão e o município reavaliem a situação. |
+| **Tentativas de Contato sem Êxito** | **3 tentativas** | O paciente é movido para **Aguardando Micrologos** para busca ativa na atenção primária (UBS). |
+| **Tempo Limite de Sessão** | **15 minutos** | Logout preventivo automático por inatividade para conformidade com a LGPD e privacidade de dados médicos. |
 
 ---
 
-## 📊 4. Visão Executiva Geral (Dashboard)
+## 📊 5. Painel Executivo Geral (Dashboard)
 
-Como administrador, você tem acesso irrestrito a todas as unidades e a todos os indicadores em tempo real:
+O administrador possui visão abrangente e consolidada de todas as unidades:
 
-![Painel Executivo Geral](./imagens/tela_dashboard.jpg)
+![Painel Executivo Geral](./imagens/tela_dashboard.png)
 
-- Alterne entre os polos no seletor de topo para acompanhar o desempenho de cada equipe.
-- Verifique a distribuição da demanda cirúrgica e garanta que não haja pacientes acumulados sem contato (*Sem Interação*).
+- Acompanhe a distribuição em tempo real entre os status **Regulados**, **Agendados**, **Micrologos**, **Sem Interação** e **Casos Urgentes**.
+- Filtre por polo individual ou visualize o agregado estadual no seletor de unidades do cabeçalho.
 
 ---
 
-## ☁️ 5. Status do Banco de Dados Supabase
-Na barra superior azul-marinho:
-- **Ponto Verde (Supabase Conectado)**: Todas as gravações estão sendo enviadas com sucesso para a nuvem.
-- **Sincronização Manual**: Ao clicar no ícone de banco de dados, você pode forçar o envio imediato (*Enviar Dados Locais para o Supabase*) ou recarregar os dados mais recentes (*Recarregar Dados da Nuvem*).
+## 📈 6. Central de Relatórios e Exportações
+
+Na aba **Relatórios**, o administrador pode auditar todo o histórico e exportar dados brutos:
+
+![Central de Relatórios de Pacientes](./imagens/tela_relatorios.png)
+
+- Filtros combinados por Unidade, Município, Procedimento, Prioridade e Intervalo de Datas.
+- Exportação nativa em formato Excel (`.xlsx`) e visualização/impressão direta em documento PDF com cabeçalho do SUS.
