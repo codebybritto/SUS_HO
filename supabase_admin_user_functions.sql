@@ -1,9 +1,27 @@
 -- =========================================================================
 -- FUNÇÕES DE GERENCIAMENTO DE USUÁRIOS POR ADMINISTRADOR NO SUPABASE
--- Execute no SQL Editor do Supabase se desejar habilitar RPC direto no banco
+-- Execute este script no SQL Editor do painel Supabase para ativar
+-- a criação, redefinição de senha e exclusão de operadores diretamente no banco.
 -- =========================================================================
 
--- 1. Permite ao Admin criar usuário no auth.users e profiles
+-- 0. Certifica extensão pgcrypto ativa
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+
+-- 1. Garante que a função is_admin() existe e valida corretamente o administrador
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN AS $$
+  SELECT (
+    (auth.jwt() ->> 'role' = 'service_role') OR
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role = 'admin' AND (active IS TRUE OR active IS NULL)
+    )
+  );
+$$ LANGUAGE sql STABLE SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated, anon, service_role;
+
+-- 2. Permite ao Admin criar usuário no auth.users, auth.identities e profiles
 CREATE OR REPLACE FUNCTION public.admin_create_user(
   new_name TEXT,
   new_login TEXT,
@@ -24,15 +42,20 @@ BEGIN
     RAISE EXCEPTION 'Acesso negado: apenas administradores podem criar usuários';
   END IF;
 
-  -- Verifica unicidade de login
+  -- Verifica se login já existe
   IF EXISTS (SELECT 1 FROM public.profiles WHERE login = new_login) THEN
     RAISE EXCEPTION 'Já existe um operador cadastrado com o login: %', new_login;
+  END IF;
+
+  -- Verifica se e-mail já existe
+  IF EXISTS (SELECT 1 FROM auth.users WHERE email = new_email) THEN
+    RAISE EXCEPTION 'Já existe uma conta cadastrada com o e-mail: %', new_email;
   END IF;
 
   new_id := gen_random_uuid();
   enc_pw := extensions.crypt(new_password, extensions.gen_salt('bf'));
 
-  -- Insere no auth.users
+  -- 2.1. Insere credenciais oficiais no auth.users
   INSERT INTO auth.users (
     id,
     instance_id,
@@ -65,7 +88,26 @@ BEGIN
     NOW()
   );
 
-  -- Insere ou atualiza o perfil em profiles
+  -- 2.2. Insere na auth.identities para permitir login imediato por e-mail e senha
+  INSERT INTO auth.identities (
+    id,
+    user_id,
+    identity_data,
+    provider,
+    last_sign_in_at,
+    created_at,
+    updated_at
+  ) VALUES (
+    new_id::text,
+    new_id,
+    jsonb_build_object('sub', new_id::text, 'email', new_email),
+    'email',
+    NOW(),
+    NOW(),
+    NOW()
+  ) ON CONFLICT DO NOTHING;
+
+  -- 2.3. Insere ou atualiza o perfil em profiles
   INSERT INTO public.profiles (
     id, name, login, email, role, unit_ids, permissions, active, created_at, updated_at
   ) VALUES (
@@ -81,7 +123,7 @@ BEGIN
     active = true,
     updated_at = NOW();
 
-  -- Insere em system_users para compatibilidade
+  -- 2.4. Insere em system_users para compatibilidade legada
   INSERT INTO public.system_users (
     id, name, login, role, active, unit_ids, permissions, email, created_at
   ) VALUES (
@@ -100,7 +142,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 2. Redefinição de senha de usuário por administrador
+-- 3. Redefinição de senha de operador por administrador
 CREATE OR REPLACE FUNCTION public.admin_reset_user_password(
   target_user_id UUID,
   new_password TEXT
@@ -120,7 +162,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 3. Exclusão de usuário por administrador
+-- 4. Exclusão de operador por administrador
 CREATE OR REPLACE FUNCTION public.admin_delete_user(
   target_user_id UUID
 )
@@ -140,3 +182,11 @@ BEGIN
   RETURN true;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 5. Permissões de execução para usuários autenticados e service_role
+GRANT EXECUTE ON FUNCTION public.admin_create_user(TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, JSONB) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.admin_reset_user_password(UUID, TEXT) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.admin_delete_user(UUID) TO authenticated, service_role;
+
+-- 6. Notifica o PostgREST para recarregar o cache de esquemas imediatamente
+NOTIFY pgrst, 'reload schema';

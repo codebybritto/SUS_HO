@@ -463,7 +463,8 @@ export const supabaseService = {
         body: JSON.stringify(u),
       });
 
-      if (res.ok) {
+      const contentType = res.headers.get('content-type') || '';
+      if (res.ok && contentType.includes('application/json')) {
         const data = await res.json();
         return {
           id: data.id,
@@ -478,17 +479,19 @@ export const supabaseService = {
         };
       }
 
-      const errData = await res.json().catch(() => null);
-      if (res.status === 400 || res.status === 403) {
-        throw new Error(errData?.error || 'Erro ao cadastrar usuário.');
+      if (contentType.includes('application/json')) {
+        const errData = await res.json().catch(() => null);
+        if (res.status === 400 || res.status === 403) {
+          throw new Error(errData?.error || 'Erro ao cadastrar usuário.');
+        }
       }
     } catch (fetchErr: any) {
-      if (fetchErr.message && !fetchErr.message.includes('fetch') && !fetchErr.message.includes('Failed')) {
+      if (fetchErr.message && !fetchErr.message.includes('fetch') && !fetchErr.message.includes('Failed') && !fetchErr.message.includes('JSON')) {
         throw fetchErr;
       }
     }
 
-    // 2. Fallback via PostgreSQL RPC 'admin_create_user' (se configurado no Supabase)
+    // 2. Fallback via PostgreSQL RPC 'admin_create_user' (executado no Supabase)
     try {
       const { data: rpcData, error: rpcErr } = await supabase.rpc('admin_create_user', {
         new_name: u.name,
@@ -514,6 +517,9 @@ export const supabaseService = {
         };
       }
       if (rpcErr) {
+        if (rpcErr.message.includes('Could not find the function') || rpcErr.message.includes('schema cache')) {
+          throw new Error('Função de criação de usuários não instalada no banco. Execute o script "supabase_admin_user_functions.sql" no SQL Editor do Supabase.');
+        }
         throw new Error(rpcErr.message);
       }
     } catch (rpcCatch: any) {
