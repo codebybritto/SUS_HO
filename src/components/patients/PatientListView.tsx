@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import {
   Search,
   Filter,
-  Eye,
+  CheckCircle2,
   PhoneCall,
   CalendarX,
   Activity,
@@ -46,7 +46,15 @@ export const PatientListView: React.FC<PatientListViewProps> = ({
   onEditPatient,
   initialStatusFilter = 'ALL',
 }) => {
-  const { patients, units, procedures, doctors, settings, setPatientPriorityOverride } = useApp();
+  const {
+    patients,
+    units,
+    procedures,
+    doctors,
+    settings,
+    setPatientPriorityOverride,
+    recordStatusChange,
+  } = useApp();
   const { currentUser, allowedUnits, activeUnitId, hasPermission } = useAuth();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,6 +70,48 @@ export const PatientListView: React.FC<PatientListViewProps> = ({
   // Manager Priority Override Modal state
   const [priorityModalPatient, setPriorityModalPatient] = useState<Patient | null>(null);
   const [priorityReason, setPriorityReason] = useState<string>('');
+
+  // Completion Modal state (Ação Rápida Concluído)
+  const [completeModalPatient, setCompleteModalPatient] = useState<Patient | null>(null);
+  const [completionOutcome, setCompletionOutcome] = useState<string>('Procedimento Realizado com Sucesso');
+  const [completionDate, setCompletionDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [completionNotes, setCompletionNotes] = useState<string>('');
+  const [isCompleting, setIsCompleting] = useState<boolean>(false);
+
+  const handleOpenCompleteModal = (patient: Patient) => {
+    setCompleteModalPatient(patient);
+    setCompletionOutcome('Procedimento Realizado com Sucesso');
+    setCompletionDate(new Date().toISOString().split('T')[0]);
+    setCompletionNotes('');
+  };
+
+  const handleConfirmCompletion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!completeModalPatient) return;
+    setIsCompleting(true);
+    try {
+      const parts = [
+        `Desfecho: ${completionOutcome}`,
+        completionDate ? `Data: ${formatDateBR(completionDate)}` : '',
+        completionNotes ? `Obs: ${completionNotes.trim()}` : '',
+      ].filter(Boolean);
+
+      recordStatusChange(completeModalPatient.id, 'Concluído', parts.join(' | '));
+      setCompleteModalPatient(null);
+    } finally {
+      setIsCompleting(false);
+    }
+  };
+
+  const handleReopenPatient = () => {
+    if (!completeModalPatient) return;
+    recordStatusChange(
+      completeModalPatient.id,
+      'Agendado',
+      'Atendimento reaberto na fila cirúrgica/ambulatorial pela equipe.'
+    );
+    setCompleteModalPatient(null);
+  };
 
   const canManagePriority =
     currentUser?.role === 'admin' ||
@@ -730,13 +780,22 @@ export const PatientListView: React.FC<PatientListViewProps> = ({
                           >
                             <CalendarX className="w-3.5 h-3.5" />
                           </button>
+                          {/* Ação Rápida: Concluído */}
                           <button
                             type="button"
-                            onClick={() => onSelectPatient(pat)}
-                            className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
-                            title="Ver Detalhes e Timeline"
+                            onClick={() => handleOpenCompleteModal(pat)}
+                            className={`p-1.5 rounded transition-colors ${
+                              pat.currentStatus === 'Concluído'
+                                ? 'text-teal-700 bg-teal-100 hover:bg-teal-200 ring-1 ring-teal-400/40'
+                                : 'text-slate-500 hover:text-teal-700 hover:bg-teal-50'
+                            }`}
+                            title={
+                              pat.currentStatus === 'Concluído'
+                                ? 'Atendimento Concluído (Clique para gerenciar)'
+                                : 'Marcar como Concluído'
+                            }
                           >
-                            <Eye className="w-3.5 h-3.5" />
+                            <CheckCircle2 className={`w-3.5 h-3.5 ${pat.currentStatus === 'Concluído' ? 'stroke-[2.5]' : ''}`} />
                           </button>
                         </div>
                       </td>
@@ -951,6 +1010,181 @@ export const PatientListView: React.FC<PatientListViewProps> = ({
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Concluir Atendimento do Paciente */}
+      {completeModalPatient && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200 flex flex-col">
+            {/* Header */}
+            <div className="bg-slate-950 text-white px-5 py-4 flex items-center justify-between border-b border-teal-900/40">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 bg-teal-500/20 text-teal-400 rounded-lg">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">
+                    {completeModalPatient.currentStatus === 'Concluído'
+                      ? 'Gerenciar Atendimento Concluído'
+                      : 'Concluir Atendimento'}
+                  </h3>
+                  <p className="text-xs text-slate-400 truncate max-w-xs">{completeModalPatient.name}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCompleteModalPatient(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <form onSubmit={handleConfirmCompletion} className="p-5 space-y-4 text-xs">
+              {/* Patient Details Card */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-semibold">Procedimento:</span>
+                  <span className="font-bold text-slate-800 text-right truncate max-w-[240px]">
+                    {completeModalPatient.requestedProcedureName || 'Procedimento Geral'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-semibold">Olho:</span>
+                  <span className="font-bold text-slate-800">{completeModalPatient.eyeSide}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-semibold">Município / Polo:</span>
+                  <span className="font-medium text-slate-700">{completeModalPatient.city} ({completeModalPatient.unitName})</span>
+                </div>
+                <div className="flex justify-between items-center pt-1 border-t border-slate-200/60">
+                  <span className="text-slate-500 font-semibold">Status Atual:</span>
+                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${getStatusStyle(completeModalPatient.currentStatus).badgeClass}`}>
+                    {completeModalPatient.currentStatus}
+                  </span>
+                </div>
+              </div>
+
+              {completeModalPatient.currentStatus === 'Concluído' ? (
+                <div className="space-y-3">
+                  <div className="p-3 bg-teal-50 border border-teal-200 text-teal-900 rounded-xl flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
+                    <div className="text-xs">
+                      <p className="font-bold">Este paciente já está com o atendimento Concluído.</p>
+                      <p className="text-teal-700 mt-0.5">Você pode atualizar as observações ou reabrir o paciente na fila caso necessite de novo procedimento.</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-semibold mb-1">
+                      Anotações / Observações Adicionais
+                    </label>
+                    <textarea
+                      value={completionNotes}
+                      onChange={(e) => setCompletionNotes(e.target.value)}
+                      placeholder="Observações adicionais sobre o pós-operatório..."
+                      rows={3}
+                      className="w-full border border-slate-300 rounded-xl p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600"
+                    />
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-200 flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={handleReopenPatient}
+                      className="px-3 py-2 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition-colors"
+                      title="Voltar o paciente para a fila ativa"
+                    >
+                      Reabrir na Fila
+                    </button>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCompleteModalPatient(null)}
+                        className="px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                      >
+                        Fechar
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isCompleting}
+                        className="px-4 py-2 text-xs font-semibold bg-teal-600 hover:bg-teal-700 text-white rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Salvar Anotação</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-slate-700 font-semibold mb-1">
+                      Desfecho do Atendimento *
+                    </label>
+                    <select
+                      value={completionOutcome}
+                      onChange={(e) => setCompletionOutcome(e.target.value)}
+                      className="w-full border border-slate-300 rounded-xl p-2.5 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600"
+                    >
+                      <option value="Procedimento Realizado com Sucesso">Procedimento Realizado com Sucesso</option>
+                      <option value="Alta Médica / Tratamento Concluído">Alta Médica / Tratamento Concluído</option>
+                      <option value="Cirurgia Concluída - Pós-Operatório Agendado">Cirurgia Concluída - Pós-Operatório Agendado</option>
+                      <option value="Procedimento Realizado em Outra Unidade">Procedimento Realizado em Outra Unidade</option>
+                      <option value="Outro Desfecho Concluído">Outro Desfecho Concluído</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-semibold mb-1">
+                      Data da Realização / Conclusão *
+                    </label>
+                    <input
+                      type="date"
+                      value={completionDate}
+                      onChange={(e) => setCompletionDate(e.target.value)}
+                      className="w-full border border-slate-300 rounded-xl p-2 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-semibold mb-1">
+                      Observações Clínicas / Pós-Operatório
+                    </label>
+                    <textarea
+                      value={completionNotes}
+                      onChange={(e) => setCompletionNotes(e.target.value)}
+                      placeholder="Ex: Procedimento cirúrgico concluído sem intercorrências..."
+                      rows={3}
+                      className="w-full border border-slate-300 rounded-xl p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600"
+                    />
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCompleteModalPatient(null)}
+                      className="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isCompleting}
+                      className="px-4 py-2 text-xs font-semibold bg-teal-600 hover:bg-teal-700 text-white rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Confirmar Conclusão</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </form>
           </div>
         </div>
       )}

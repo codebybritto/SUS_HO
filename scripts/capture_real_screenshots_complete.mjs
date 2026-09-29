@@ -221,11 +221,20 @@ async function captureAllRealScreenshots() {
     await page.screenshot({ path: path.join(OUTPUT_DIR, 'tela_dashboard.png') });
     console.log('-> tela_dashboard.png salva!');
 
-    // 4. TELA DE CADASTRO DE PACIENTE REAL
-    console.log('5. Abrindo modal de Cadastrar Paciente...');
+    // 4. ACESSAR ABA PACIENTES E CAPTURAR TELA DE CADASTRO
+    console.log('5. Acessando aba Pacientes...');
     await page.evaluate(() => {
       const buttons = Array.from(document.querySelectorAll('button'));
-      const btn = buttons.find(b => b.innerText.includes('Cadastrar Paciente'));
+      const btn = buttons.find(b => b.innerText.trim() === 'Pacientes');
+      if (btn) btn.click();
+    });
+    await new Promise(r => setTimeout(r, 1500));
+
+    // Abrindo modal de Cadastrar Paciente a partir do botão "Novo Paciente"
+    console.log('6. Abrindo modal de Novo Paciente na aba Pacientes...');
+    await page.evaluate(() => {
+      const buttons = Array.from(document.querySelectorAll('button'));
+      const btn = buttons.find(b => b.innerText.includes('Novo Paciente'));
       if (btn) btn.click();
     });
     await new Promise(r => setTimeout(r, 1200));
@@ -240,16 +249,12 @@ async function captureAllRealScreenshots() {
     });
     await new Promise(r => setTimeout(r, 800));
 
-    // 5. TELA DE CONTATO TELEFÔNICO REAL
-    console.log('6. Acessando aba Pacientes e abrindo modal de Contato...');
-    await page.evaluate(() => {
-      const buttons = Array.from(document.querySelectorAll('button'));
-      const btn = buttons.find(b => b.innerText.trim() === 'Pacientes');
-      if (btn) btn.click();
-    });
-    await new Promise(r => setTimeout(r, 1500));
+    // Captura da tabela de Pacientes com as novas Ações Rápidas (Concluído)
+    await page.screenshot({ path: path.join(OUTPUT_DIR, 'tela_pacientes.png') });
+    console.log('-> tela_pacientes.png salva!');
 
-    // Clicar no botão "Registrar Tentativa de Contato" do primeiro paciente
+    // 5. TELA DE CONTATO TELEFÔNICO REAL
+    console.log('7. Abrindo modal de Contato na aba Pacientes...');
     await page.evaluate(() => {
       const contactBtn = document.querySelector('button[title="Registrar Tentativa de Contato"]');
       if (contactBtn) contactBtn.click();
@@ -262,6 +267,24 @@ async function captureAllRealScreenshots() {
     await page.evaluate(() => {
       const btns = Array.from(document.querySelectorAll('button'));
       const btn = btns.find(b => b.innerText.includes('Fechar'));
+      if (btn) btn.click();
+    });
+    await new Promise(r => setTimeout(r, 800));
+
+    // 6. TELA DO MODAL CONCLUIR ATENDIMENTO
+    console.log('8. Abrindo modal de Concluir Atendimento...');
+    await page.evaluate(() => {
+      const completeBtn = document.querySelector('button[title="Marcar como Concluído"]');
+      if (completeBtn) completeBtn.click();
+    });
+    await new Promise(r => setTimeout(r, 1200));
+    await page.screenshot({ path: path.join(OUTPUT_DIR, 'tela_concluido.png') });
+    console.log('-> tela_concluido.png salva!');
+
+    // Fechar modal de conclusão
+    await page.evaluate(() => {
+      const btns = Array.from(document.querySelectorAll('button'));
+      const btn = btns.find(b => b.innerText.includes('Cancelar'));
       if (btn) btn.click();
     });
     await new Promise(r => setTimeout(r, 800));

@@ -5,7 +5,6 @@ import {
   FileText,
   ShieldAlert,
   Settings,
-  PlusCircle,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -14,14 +13,13 @@ export type MainTab = 'dashboard' | 'patients' | 'reports' | 'audit' | 'admin';
 interface NavigationProps {
   currentTab: MainTab;
   onChangeTab: (tab: MainTab) => void;
-  onNewPatient: () => void;
+  onNewPatient?: () => void;
 }
 
-export const Navigation: React.FC<NavigationProps> = ({ currentTab, onChangeTab, onNewPatient }) => {
+export const Navigation: React.FC<NavigationProps> = ({ currentTab, onChangeTab }) => {
   const { hasPermission } = useAuth();
 
   const canViewPatients = hasPermission('view_patients');
-  const canCreatePatient = hasPermission('create_patients');
   const canViewLogs = hasPermission('view_logs');
   const canViewReports = hasPermission('view_reports');
   const canAdmin =
@@ -92,19 +90,6 @@ export const Navigation: React.FC<NavigationProps> = ({ currentTab, onChangeTab,
               );
             })}
         </nav>
-
-        {/* Quick Action: New Patient */}
-        {canCreatePatient && (
-          <button
-            type="button"
-            onClick={onNewPatient}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold px-4 py-2 rounded-lg shadow-xs transition-colors shrink-0"
-          >
-            <PlusCircle className="w-4 h-4 text-white" />
-            <span className="hidden sm:inline">Cadastrar Paciente</span>
-            <span className="sm:hidden">Novo</span>
-          </button>
-        )}
       </div>
     </div>
   );

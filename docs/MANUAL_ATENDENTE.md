@@ -56,7 +56,7 @@ Ao entrar no sistema, você verá o painel com **6 cartões coloridos** e os gr�
 ## 📝 4. Como Cadastrar um Novo Paciente
 
 Para cadastrar um paciente com encaminhamento ambulatorial:
-1. No menu superior, clique no botão azul **+ Cadastrar Paciente**.
+1. Acesse a aba **Pacientes** no menu superior e clique no botão azul **+ Novo Paciente**.
 2. A janela de cadastro oficial será aberta:
 
 ![Formulário de Cadastro de Paciente](./imagens/tela_cadastro.png)
@@ -119,7 +119,7 @@ Na aba **Pacientes**, localize o paciente e clique no botão de **Contato** (íc
 ## ❌ 6. Como Registrar Faltas e Justificativas
 
 Se o paciente faltar a uma consulta agendada ou ao procedimento cirúrgico:
-1. Na lista de pacientes, acione o registro de falta.
+1. Na lista de pacientes, acione o registro de falta (ícone de calendário com X).
 2. Indique se houve apresentação de atestado ou justificativa plausível.
 3. Descreva o motivo no campo de texto.
 4. Salve o registro.
@@ -129,6 +129,20 @@ Se o paciente faltar a uma consulta agendada ou ao procedimento cirúrgico:
 
 ---
 
-## 📜 7. Prontuário e Linha do Tempo
+## ✅ 7. Como Concluir o Atendimento de um Paciente
 
-- Ao clicar no nome do paciente, você visualiza a **Linha do Tempo** auditada de todas as ações: data do cadastro, ligações realizadas, evoluções registradas e nomes das atendentes responsáveis por cada contato.
+Após o paciente realizar o exame ou cirurgia:
+1. Na lista de pacientes, na coluna **Ações**, clique no botão com ícone de check (**Marcar como Concluído**).
+2. A janela **Concluir Atendimento** será aberta:
+
+![Tela de Conclusão de Atendimento](./imagens/tela_concluido.png)
+
+3. Selecione o **Desfecho do Atendimento** (ex: *Procedimento Realizado com Sucesso*, *Alta Médica / Tratamento Concluído* ou *Cirurgia Concluída - Pós-Operatório Agendado*).
+4. Informe a **Data da Realização** e anote observações relevantes da recuperação do paciente.
+5. Clique em **Confirmar Conclusão**. O paciente receberá a etiqueta verde **Concluído** no prontuário.
+
+---
+
+## 📜 8. Prontuário e Linha do Tempo
+
+- Ao clicar no nome do paciente (ou em qualquer linha da tabela), você visualiza a **Linha do Tempo** auditada de todas as ações: data do cadastro, ligações realizadas, desfechos de atendimento e nomes dos operadores responsáveis.

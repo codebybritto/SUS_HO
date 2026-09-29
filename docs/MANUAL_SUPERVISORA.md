@@ -62,6 +62,11 @@ A supervisora possui autorização para:
 - Alterar o **Procedimento Oftalmológico** ou o **Médico Solicitante**.
 - Ajustar datas de encaminhamento e dados cadastrais de contato.
 
+### 3.3. Conclusão ou Reabertura de Atendimentos
+- Na coluna **Ações**, clique no botão com ícone de check (**Marcar como Concluído**).
+- Registre o desfecho clínico e data de realização da cirurgia/exame.
+- Caso um paciente concluído necessite de continuidade ou novo procedimento, a supervisora pode acionar a opção **Reabrir na Fila** a qualquer momento.
+
 ---
 
 ## ⚠️ 4. Tratativa de Pacientes em "Aguardando Micrologos"
