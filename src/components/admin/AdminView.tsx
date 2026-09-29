@@ -61,14 +61,8 @@ export const AdminView: React.FC = () => {
     updateSettings,
   } = useApp();
 
-  const { currentUser, hasPermission, adminResetPassword, isDemoMode } = useAuth();
-  const [activeTab, setActiveTab] = useState<AdminTab>(() => (isDemoMode ? 'units' : 'users'));
-
-  React.useEffect(() => {
-    if (isDemoMode && activeTab === 'users') {
-      setActiveTab('units');
-    }
-  }, [isDemoMode, activeTab]);
+  const { currentUser, hasPermission, adminResetPassword } = useAuth();
+  const [activeTab, setActiveTab] = useState<AdminTab>('users');
 
   // Modal states
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -92,12 +86,12 @@ export const AdminView: React.FC = () => {
   const [settingsForm, setSettingsForm] = useState<SystemSettings>(settings);
   const [settingsSavedMessage, setSettingsSavedMessage] = useState(false);
 
-  const canManageUsers = !isDemoMode && hasPermission('manage_users');
+  const canManageUsers = hasPermission('manage_users');
   const canManageUnits = hasPermission('manage_units');
   const canManageMunicipalities = hasPermission('manage_municipalities');
   const canManageProcedures = hasPermission('manage_procedures');
   const canManageDoctors = hasPermission('manage_doctors');
-  const canManageSettings = !isDemoMode && hasPermission('manage_settings');
+  const canManageSettings = hasPermission('manage_settings');
 
   // Handle settings save
   const handleSaveSettings = (e: React.FormEvent) => {
@@ -120,18 +114,6 @@ export const AdminView: React.FC = () => {
           </p>
         </div>
       </div>
-
-      {isDemoMode && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-900 flex items-center gap-3">
-          <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
-          <div>
-            <p className="font-bold">Modo de Demonstração Ativo</p>
-            <p className="text-amber-700">
-              O gerenciamento de usuários oficiais do sistema está desativado na demonstração para proteger a integridade do banco de dados real.
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Tabs */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">

@@ -20,10 +20,10 @@ import { RecordContactModal } from './components/patients/RecordContactModal';
 import { RecordAbsenceModal } from './components/patients/RecordAbsenceModal';
 import { Patient } from './types';
 import { AppLogo } from './components/common/AppLogo';
-import { Lock, User, ShieldCheck, ArrowRight, CheckCircle2, AlertCircle, KeyRound, HelpCircle, X, LogOut, Sparkles } from 'lucide-react';
+import { Lock, User, ShieldCheck, ArrowRight, CheckCircle2, AlertCircle, KeyRound, HelpCircle, X, LogOut } from 'lucide-react';
 
 const MainAppContent: React.FC = () => {
-  const { currentUser, login, sessionExpiredMessage, clearSessionExpiredMessage, isDemoMode, enterDemoMode, exitDemoMode } = useAuth();
+  const { currentUser, login, sessionExpiredMessage, clearSessionExpiredMessage } = useAuth();
   const { patients } = useApp();
 
   const [currentTab, setCurrentTab] = useState<MainTab>('dashboard');
@@ -164,21 +164,6 @@ const MainAppContent: React.FC = () => {
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
-
-            {/* Modo Demonstração (Informações Fictícias) */}
-            <div className="pt-5 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={enterDemoMode}
-                className="w-full py-2.5 px-3 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs group"
-              >
-                <Sparkles className="w-4 h-4 text-amber-600 shrink-0 group-hover:rotate-12 transition-transform" />
-                <span>Acessar Modo Demonstração (Informações Fictícias)</span>
-              </button>
-              <p className="text-[10px] text-slate-400 text-center mt-2 leading-relaxed">
-                Ambiente de teste com dados e prontuários simulados. Nenhuma informação fictícia é gravada no banco de dados real.
-              </p>
-            </div>
           </div>
         </div>
 
@@ -262,23 +247,6 @@ const MainAppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans text-slate-900">
-      {/* Banner de Modo Demonstração */}
-      {isDemoMode && (
-        <div className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 px-4 py-2.5 text-xs font-bold flex items-center justify-between shadow-md z-50 border-b border-amber-600">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-slate-950 shrink-0 animate-pulse" />
-            <span>MODO DEMONSTRAÇÃO ATIVO — Exibindo informações e prontuários fictícios para apresentação. Nenhuma alteração é gravada na base real.</span>
-          </div>
-          <button
-            type="button"
-            onClick={exitDemoMode}
-            className="px-3 py-1 bg-slate-950 hover:bg-slate-900 text-white rounded-lg text-[11px] font-bold transition-colors cursor-pointer shadow-xs shrink-0 ml-3"
-          >
-            Sair da Demonstração
-          </button>
-        </div>
-      )}
-
       {/* Top Navbar */}
       <Navbar onSearchSelectPatient={(id) => setSelectedPatientId(id)} />
 

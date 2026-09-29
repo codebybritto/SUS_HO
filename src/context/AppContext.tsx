@@ -91,11 +91,9 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { currentUser, isDemoMode } = useAuth();
+  const { currentUser } = useAuth();
 
-  const [patients, setPatients] = useState<Patient[]>(() =>
-    isDemoMode ? storageService.getDemoPatients() : storageService.getRealPatients()
-  );
+  const [patients, setPatients] = useState<Patient[]>(() => storageService.getRealPatients());
   const [units, setUnits] = useState<Unit[]>(() => storageService.getUnits());
   const [municipalities, setMunicipalities] = useState<Municipality[]>(() =>
     storageService.getMunicipalities()
@@ -103,9 +101,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [procedures, setProcedures] = useState<Procedure[]>(() => storageService.getProcedures());
   const [doctors, setDoctors] = useState<Doctor[]>(() => storageService.getDoctors());
   const [users, setUsers] = useState<User[]>(() => storageService.getUsers());
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() =>
-    isDemoMode ? storageService.getDemoAuditLogs() : storageService.getRealAuditLogs()
-  );
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => storageService.getRealAuditLogs());
   const [settings, setSettings] = useState<SystemSettings>(() => storageService.getSettings());
 
   const [supabaseSyncStatus, setSupabaseSyncStatus] = useState<SupabaseStatus>(() =>
@@ -116,15 +112,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const setDatabaseMode = (mode: 'real' | 'simulation') => {
     setDatabaseModeState(mode);
-    try {
-      localStorage.setItem('micrologos_database_mode_v4', mode);
-    } catch {}
   };
 
   const resetSimulationPatients = useCallback(() => {
-    const demoPatients = storageService.getInitialDemoPatients();
-    setPatients(demoPatients);
-    storageService.saveDemoPatients(demoPatients);
+    // Modo simulação descontinuado
   }, []);
 
   // Unified visible patients: all active records available without simulation filtering
@@ -133,9 +124,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [patients]);
 
   const allPatientsCount = React.useMemo(() => {
-    const real = patients.filter((p) => !p.isSimulation && !p.isDeleted).length;
-    const simulation = patients.filter((p) => !!p.isSimulation && !p.isDeleted).length;
-    return { real, simulation };
+    const real = patients.filter((p) => !p.isDeleted).length;
+    return { real, simulation: 0 };
   }, [patients]);
 
   // Active current user info for audit & timeline
@@ -144,7 +134,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Helper to sync patient changes to Supabase with offline queue fallback
   const syncPatientToSupabase = useCallback((patient: Patient) => {
-    if (isDemoMode) return;
     if (isSupabaseConfigured()) {
       if (syncQueueService.isOnline()) {
         supabaseService.upsertPatient(patient).then((ok) => {
@@ -159,17 +148,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         syncQueueService.enqueue('UPSERT_PATIENT', patient.id, patient);
       }
     }
-  }, [isDemoMode]);
+  }, []);
 
   // Sync entire dataset to Supabase
   const syncAllToSupabase = useCallback(async (): Promise<{ success: boolean; message: string }> => {
-    if (isDemoMode) {
-      return {
-        success: false,
-        message: 'Modo demonstração ativo com dados fictícios. Nenhuma alteração é gravada no Supabase.',
-      };
-    }
-
     if (!isSupabaseConfigured()) {
       return {
         success: false,
@@ -202,12 +184,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         message: `Falha na sincronização: ${err?.message || err}`,
       };
     }
-  }, [isDemoMode, municipalities, units, procedures, doctors, users, patients, settings]);
+  }, [municipalities, units, procedures, doctors, users, patients, settings]);
 
   // Load dataset from Supabase
   const reloadFromSupabase = useCallback(async () => {
-    if (isDemoMode) return;
-
     if (!isSupabaseConfigured()) {
       setSupabaseSyncStatus('unconfigured');
       return;
@@ -285,25 +265,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  // Mode transitions and user login synchronization with strict isolation
+  // User login synchronization: strictly load real data from Supabase
   useEffect(() => {
-    if (isDemoMode) {
-      setPatients(storageService.getDemoPatients());
-      setAuditLogs(storageService.getDemoAuditLogs());
-    } else {
-      // In real mode, strictly load real data from Supabase
-      setPatients([]);
-      setAuditLogs([]);
-      if (isSupabaseConfigured()) {
-        reloadFromSupabase();
-      }
+    if (isSupabaseConfigured()) {
+      reloadFromSupabase();
     }
-  }, [isDemoMode, currentUser?.id, reloadFromSupabase]);
+  }, [currentUser?.id, reloadFromSupabase]);
 
   // Reconnect listener: process offline queue automatically when connection is restored
   useEffect(() => {
-    if (isDemoMode) return;
-
     const unsubscribe = syncQueueService.subscribe(async (count, isOnline) => {
       if (isOnline && count > 0 && isSupabaseConfigured()) {
         try {
@@ -322,16 +292,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     return unsubscribe;
-  }, [isDemoMode, reloadFromSupabase]);
+  }, [reloadFromSupabase]);
 
-  // Save changes to LocalStorage whenever state updates (offline cache) with strict mode separation
+  // Save changes to LocalStorage whenever state updates (offline cache)
   useEffect(() => {
-    if (isDemoMode) {
-      storageService.saveDemoPatients(patients);
-    } else {
-      storageService.saveRealPatients(patients);
-    }
-  }, [patients, isDemoMode]);
+    storageService.saveRealPatients(patients);
+  }, [patients]);
 
   useEffect(() => {
     storageService.saveUnits(units);
@@ -350,18 +316,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [doctors]);
 
   useEffect(() => {
-    if (!isDemoMode) {
-      storageService.saveUsers(users);
-    }
-  }, [users, isDemoMode]);
+    storageService.saveUsers(users);
+  }, [users]);
 
   useEffect(() => {
-    if (isDemoMode) {
-      storageService.saveDemoAuditLogs(auditLogs);
-    } else {
-      storageService.saveRealAuditLogs(auditLogs);
-    }
-  }, [auditLogs, isDemoMode]);
+    storageService.saveRealAuditLogs(auditLogs);
+  }, [auditLogs]);
 
   useEffect(() => {
     storageService.saveSettings(settings);
@@ -377,7 +337,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setAuditLogs((prev) => [newLog, ...prev.slice(0, 1999)]);
 
-    if (!isDemoMode && isSupabaseConfigured()) {
+    if (isSupabaseConfigured()) {
       supabaseService.insertAuditLog(newLog).catch((err) => {
         console.warn('Erro ao registrar log no Supabase:', err);
       });
@@ -445,7 +405,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       requestingDoctorName: doc?.name || data.requestingDoctorName || '',
       eyeSide: primaryEye,
       isUrgent: !!data.isUrgent,
-      isSimulation: databaseMode === 'simulation',
+      isSimulation: false,
       city: data.city || '',
       hasFollowup: !!data.hasFollowup,
       followupDate: data.followupDate,
@@ -1173,7 +1133,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       municipalities: unitData.municipalities || [],
     };
     setUnits((prev) => [...prev, newUnit]);
-    if (!isDemoMode && isSupabaseConfigured()) {
+    if (isSupabaseConfigured()) {
       supabaseService.upsertUnit(newUnit).catch(console.warn);
     }
     logAudit({
@@ -1190,7 +1150,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((u) => {
         if (u.id !== id) return u;
         const updated = { ...u, ...unitData };
-        if (!isDemoMode && isSupabaseConfigured()) {
+        if (isSupabaseConfigured()) {
           supabaseService.upsertUnit(updated).catch(console.warn);
         }
         logAudit({
@@ -1208,7 +1168,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteUnit = (id: string) => {
     const unit = units.find((u) => u.id === id);
     setUnits((prev) => prev.filter((u) => u.id !== id));
-    if (!isDemoMode && isSupabaseConfigured()) {
+    if (isSupabaseConfigured()) {
       supabaseService.deleteUnit(id).catch(console.warn);
     }
     if (unit) {
@@ -1229,7 +1189,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `mun-${Date.now()}`,
     };
     setMunicipalities((prev) => [...prev, newMun]);
-    if (!isDemoMode && isSupabaseConfigured()) {
+    if (isSupabaseConfigured()) {
       supabaseService.upsertMunicipality(newMun).catch(console.warn);
     }
     logAudit({
@@ -1246,7 +1206,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((m) => {
         if (m.id !== id) return m;
         const updated = { ...m, ...munData };
-        if (!isDemoMode && isSupabaseConfigured()) {
+        if (isSupabaseConfigured()) {
           supabaseService.upsertMunicipality(updated).catch(console.warn);
         }
         logAudit({
@@ -1264,7 +1224,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteMunicipality = (id: string) => {
     const m = municipalities.find((mun) => mun.id === id);
     setMunicipalities((prev) => prev.filter((mun) => mun.id !== id));
-    if (!isDemoMode && isSupabaseConfigured()) {
+    if (isSupabaseConfigured()) {
       supabaseService.deleteMunicipality(id).catch(console.warn);
     }
     if (m) {
@@ -1285,7 +1245,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `proc-${Date.now()}`,
     };
     setProcedures((prev) => [...prev, newProc]);
-    if (!isDemoMode && isSupabaseConfigured()) {
+    if (isSupabaseConfigured()) {
       supabaseService.upsertProcedure(newProc).catch(console.warn);
     }
     logAudit({
@@ -1302,7 +1262,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((p) => {
         if (p.id !== id) return p;
         const updated = { ...p, ...procData };
-        if (!isDemoMode && isSupabaseConfigured()) {
+        if (isSupabaseConfigured()) {
           supabaseService.upsertProcedure(updated).catch(console.warn);
         }
         logAudit({
@@ -1320,7 +1280,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteProcedure = (id: string) => {
     const proc = procedures.find((p) => p.id === id);
     setProcedures((prev) => prev.filter((p) => p.id !== id));
-    if (!isDemoMode && isSupabaseConfigured()) {
+    if (isSupabaseConfigured()) {
       supabaseService.deleteProcedure(id).catch(console.warn);
     }
     if (proc) {
@@ -1341,7 +1301,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `doc-${Date.now()}`,
     };
     setDoctors((prev) => [...prev, newDoc]);
-    if (!isDemoMode && isSupabaseConfigured()) {
+    if (isSupabaseConfigured()) {
       supabaseService.upsertDoctor(newDoc).catch(console.warn);
     }
     logAudit({
@@ -1358,7 +1318,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((d) => {
         if (d.id !== id) return d;
         const updated = { ...d, ...docData };
-        if (!isDemoMode && isSupabaseConfigured()) {
+        if (isSupabaseConfigured()) {
           supabaseService.upsertDoctor(updated).catch(console.warn);
         }
         logAudit({
@@ -1376,7 +1336,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteDoctor = (id: string) => {
     const doc = doctors.find((d) => d.id === id);
     setDoctors((prev) => prev.filter((d) => d.id !== id));
-    if (!isDemoMode && isSupabaseConfigured()) {
+    if (isSupabaseConfigured()) {
       supabaseService.deleteDoctor(id).catch(console.warn);
     }
     if (doc) {
@@ -1392,11 +1352,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Users
   const addUser = async (userData: Omit<User, 'id' | 'createdAt'> & { password?: string }) => {
-    if (isDemoMode) {
-      alert('Criação de usuários bloqueada no modo demonstração');
-      return;
-    }
-
     try {
       const created = await supabaseService.createUser({
         name: userData.name,
@@ -1435,11 +1390,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateUser = async (id: string, userData: Partial<User> & { password?: string }) => {
-    if (isDemoMode) {
-      alert('Edição de usuários bloqueada no modo demonstração');
-      return;
-    }
-
     try {
       const updated = await supabaseService.updateUser({ id, ...userData });
       const targetUser = updated || { ...(users.find((u) => u.id === id) as User), ...userData };
@@ -1465,10 +1415,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteUser = async (id: string) => {
-    if (isDemoMode) {
-      alert('Exclusão de usuários bloqueada no modo demonstração');
-      return;
-    }
     const user = users.find((u) => u.id === id);
     try {
       await supabaseService.deleteUser(id);
@@ -1497,7 +1443,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateSettings = (newSettings: Partial<SystemSettings>) => {
     setSettings((prev) => {
       const updated = { ...prev, ...newSettings };
-      if (!isDemoMode && isSupabaseConfigured()) {
+      if (isSupabaseConfigured()) {
         supabaseService.saveSettings(updated).catch(console.warn);
       }
       logAudit({

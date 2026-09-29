@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserPermissions, Unit, UserRole } from '../types';
-import { storageService, DEMO_USER } from '../services/storage';
+import { storageService } from '../services/storage';
 import { supabaseService } from '../services/supabaseService';
 import { supabase, isSupabaseConfigured, OFFICIAL_URL, OFFICIAL_ANON_KEY } from '../services/supabase';
 import { createClient } from '@supabase/supabase-js';
@@ -96,41 +96,21 @@ export const buildUserFromAuthAndProfile = (authUser: any, profile?: any): User 
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    const user = storageService.getCurrentUser();
-    if (user && user.id === DEMO_USER.id) {
-      return null;
-    }
-    return user;
+    return storageService.getCurrentUser();
   });
   const [allUnits, setAllUnits] = useState<Unit[]>(() => storageService.getUnits());
   const [activeUnitId, setActiveUnitIdState] = useState<string | 'ALL'>('ALL');
   const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(null);
-  const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem('micrologos_is_demo_mode_v6') === 'true';
-    } catch {
-      return false;
-    }
-  });
 
-  const enterDemoMode = () => {
-    setIsDemoMode(true);
+  // Clear any legacy demo mode storage
+  useEffect(() => {
     try {
-      localStorage.setItem('micrologos_is_demo_mode_v6', 'true');
+      localStorage.removeItem('micrologos_is_demo_mode_v6');
+      localStorage.removeItem('micrologos_demo_patients_v6');
+      localStorage.removeItem('micrologos_demo_audit_logs_v6');
+      localStorage.removeItem('micrologos_database_mode_v4');
     } catch {}
-    setCurrentUser(DEMO_USER);
-    storageService.setCurrentUser(DEMO_USER);
-    setSessionExpiredMessage(null);
-  };
-
-  const exitDemoMode = () => {
-    setIsDemoMode(false);
-    try {
-      localStorage.setItem('micrologos_is_demo_mode_v6', 'false');
-    } catch {}
-    setCurrentUser(null);
-    storageService.setCurrentUser(null);
-  };
+  }, []);
 
   // Rehydrate session from Supabase Auth & subscribe to token lifecycle changes
   useEffect(() => {
@@ -138,7 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Check existing active session
     supabase.auth.getSession().then(async ({ data: { session }, error }) => {
-      if (!error && session?.user && !isDemoMode) {
+      if (!error && session?.user) {
         try {
           const profile = await supabaseService.fetchProfile(session.user.id);
           const user = buildUserFromAuthAndProfile(session.user, profile);
@@ -158,8 +138,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Subscribe to Supabase Auth state changes (token refresh, sign-in, sign-out)
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (isDemoMode) return;
-
       if (event === 'SIGNED_OUT' || !session) {
         setCurrentUser(null);
         storageService.setCurrentUser(null);
@@ -180,7 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       authListener?.subscription?.unsubscribe();
     };
-  }, [isDemoMode]);
+  }, []);
 
   useEffect(() => {
     // Refresh units in case updated
@@ -213,15 +191,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     storageService.setActiveUnitId(unitId);
   };
 
-  const switchUser = (userId: string) => {
-    if (isDemoMode) {
-      const users = storageService.getUsers();
-      const target = users.find((u) => u.id === userId);
-      if (target) {
-        setCurrentUser(target);
-        storageService.setCurrentUser(target);
-      }
-    }
+  const switchUser = (_userId: string) => {
+    // Mode demo desativado
   };
 
   // Official Supabase Auth Login (Zero custom password verification)
@@ -229,11 +200,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loginInput: string,
     pass?: string
   ): Promise<{ success: boolean; error?: string }> => {
-    setIsDemoMode(false);
-    try {
-      localStorage.setItem('micrologos_is_demo_mode_v6', 'false');
-    } catch {}
-
     const cleanInput = (loginInput || '').trim();
     const cleanPass = (pass || '').trim();
 
@@ -341,11 +307,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    setIsDemoMode(false);
-    try {
-      localStorage.setItem('micrologos_is_demo_mode_v6', 'false');
-    } catch {}
-
     if (supabase && isSupabaseConfigured()) {
       try {
         await supabase.auth.signOut();
@@ -362,7 +323,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // 15-Minute Inactivity Session Timeout Effect
   useEffect(() => {
-    if (!currentUser || isDemoMode) return;
+    if (!currentUser) return;
 
     let timeoutId: ReturnType<typeof setTimeout>;
 
@@ -390,13 +351,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       clearTimeout(timeoutId);
       events.forEach((ev) => window.removeEventListener(ev, resetTimer));
     };
-  }, [currentUser, isDemoMode]);
+  }, [currentUser]);
 
   const hasPermission = (permission: keyof UserPermissions): boolean => {
     if (!currentUser) return false;
-    if (isDemoMode && (permission === 'manage_users' || permission === 'manage_settings')) {
-      return false;
-    }
     if (currentUser.role === 'admin') return true;
     return !!currentUser.permissions[permission];
   };
@@ -408,7 +366,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const changeOwnPassword = async (newPassword: string): Promise<boolean> => {
-    if (!currentUser || isDemoMode) return false;
+    if (!currentUser) return false;
     if (!supabase || !isSupabaseConfigured()) return false;
 
     try {
@@ -441,7 +399,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     newPassword: string,
     forceChangeOnNextLogin: boolean = true
   ): Promise<boolean> => {
-    if (isDemoMode) return false;
     return await supabaseService.adminResetPassword(userId, newPassword, forceChangeOnNextLogin);
   };
 
@@ -469,9 +426,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         switchUser,
         login,
         logout,
-        isDemoMode,
-        enterDemoMode,
-        exitDemoMode,
+        isDemoMode: false,
+        enterDemoMode: () => {},
+        exitDemoMode: () => {},
         sessionExpiredMessage,
         clearSessionExpiredMessage,
         hasPermission,
