@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { exportHtmlToPdf } from '../../utils/pdfExport';
 import {
@@ -48,17 +48,55 @@ export const ReportsView: React.FC = () => {
 
   const allowedUnitIds = useMemo(() => allowedUnits.map((u) => u.id), [allowedUnits]);
 
-  // Unique cities from patients and municipalities
+  // Unique cities strictly based on selected unit or authorized units
   const availableCities = useMemo(() => {
     const set = new Set<string>();
-    patients.forEach((p) => {
-      if (p.city) set.add(p.city);
-    });
-    municipalities.forEach((m) => {
-      if (m.name) set.add(m.name);
-    });
-    return Array.from(set).sort();
-  }, [patients, municipalities]);
+
+    if (selectedUnit !== 'ALL') {
+      const targetUnit = units.find((u) => u.id === selectedUnit);
+      if (targetUnit?.municipalities && targetUnit.municipalities.length > 0) {
+        targetUnit.municipalities.forEach((m) => {
+          if (m && m.trim()) set.add(m.trim());
+        });
+      } else {
+        // Fallback: cities of patients in this unit
+        patients.forEach((p) => {
+          if (p.unitId === selectedUnit && p.city) set.add(p.city.trim());
+        });
+      }
+    } else {
+      // "ALL" units: show municipalities for all authorized units
+      const accessibleUnits = allowedUnits.length > 0 ? allowedUnits : units;
+      let hasUnitSpecificMunicipalities = false;
+
+      accessibleUnits.forEach((u) => {
+        if (u.municipalities && u.municipalities.length > 0) {
+          hasUnitSpecificMunicipalities = true;
+          u.municipalities.forEach((m) => {
+            if (m && m.trim()) set.add(m.trim());
+          });
+        }
+      });
+
+      if (!hasUnitSpecificMunicipalities || set.size === 0) {
+        municipalities.forEach((m) => {
+          if (m.name && m.active !== false) set.add(m.name.trim());
+        });
+        patients.forEach((p) => {
+          if (p.city && allowedUnitIds.includes(p.unitId)) set.add(p.city.trim());
+        });
+      }
+    }
+
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }, [selectedUnit, units, allowedUnits, allowedUnitIds, municipalities, patients]);
+
+  // Reset selectedCity if current selection is not available in the scoped unit's cities
+  useEffect(() => {
+    if (selectedCity !== 'ALL' && !availableCities.includes(selectedCity)) {
+      setSelectedCity('ALL');
+    }
+  }, [availableCities, selectedCity]);
 
   // Combined Filter logic (Faixa etária removed)
   const filteredPatients = useMemo(() => {
@@ -685,7 +723,7 @@ export const ReportsView: React.FC = () => {
 
           {/* City Filter */}
           <div>
-            <label className="block text-slate-700 font-semibold mb-1">Município de Origem</label>
+            <label className="block text-slate-700 font-semibold mb-1">Município</label>
             <select
               value={selectedCity}
               onChange={(e) => setSelectedCity(e.target.value)}
