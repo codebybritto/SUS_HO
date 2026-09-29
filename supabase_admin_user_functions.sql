@@ -98,7 +98,7 @@ BEGIN
     created_at,
     updated_at
   ) VALUES (
-    new_id::text,
+    new_id,
     new_id,
     jsonb_build_object('sub', new_id::text, 'email', new_email),
     'email',
