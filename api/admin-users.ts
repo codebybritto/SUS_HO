@@ -71,6 +71,48 @@ export default async function handler(req: any, res: any) {
       } catch {}
     }
 
+    if (req.method === 'GET') {
+      // LIST ALL USERS WITH EXACT MUST_CHANGE_PASSWORD FROM AUTH METADATA
+      const { data: profs, error: profErr } = await adminClient
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (profErr) {
+        return sendJson(500, { error: profErr.message });
+      }
+
+      const { data: authData } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
+      const authMap: Record<string, any> = {};
+      (authData?.users || []).forEach((u: any) => {
+        authMap[u.id] = u;
+      });
+
+      const users = (profs || []).map((p: any) => {
+        const authUser = authMap[p.id];
+        const mustChange = Boolean(
+          p.must_change_password ||
+          authUser?.user_metadata?.must_change_password ||
+          authUser?.user_metadata?.force_change_password
+        );
+        return {
+          id: p.id,
+          name: p.name,
+          login: p.login,
+          email: p.email,
+          role: p.role,
+          active: p.active,
+          unitIds: p.unit_ids || [],
+          permissions: p.permissions || {},
+          createdAt: p.created_at,
+          lastLoginAt: authUser?.last_sign_in_at,
+          mustChangePassword: mustChange,
+        };
+      });
+
+      return sendJson(200, users);
+    }
+
     if (req.method === 'POST') {
       // CREATE USER
       const { name, login, email, password, role, unitIds, permissions, active, mustChangePassword } = body || {};
@@ -114,7 +156,7 @@ export default async function handler(req: any, res: any) {
 
       const authId = newAuth.user.id;
 
-      // Upsert profile
+      // Upsert profile (sem must_change_password direto para não quebrar se coluna estiver pendente no banco)
       const profileRow: any = {
         id: authId,
         name: String(name).trim(),
@@ -124,7 +166,6 @@ export default async function handler(req: any, res: any) {
         unit_ids: Array.isArray(unitIds) ? unitIds : [],
         permissions: permissions || {},
         active: active !== false,
-        must_change_password: Boolean(mustChangePassword),
         updated_at: new Date().toISOString(),
       };
 
@@ -138,6 +179,12 @@ export default async function handler(req: any, res: any) {
         // Rollback auth user
         await adminClient.auth.admin.deleteUser(authId);
         return sendJson(500, { error: `Falha ao criar perfil: ${profErr.message}` });
+      }
+
+      if (typeof mustChangePassword === 'boolean') {
+        try {
+          await adminClient.from('profiles').update({ must_change_password: mustChangePassword }).eq('id', authId);
+        } catch {}
       }
 
       // Also upsert into system_users for compatibility
@@ -186,13 +233,18 @@ export default async function handler(req: any, res: any) {
           permissions: permissions || undefined,
         },
       };
+      if (typeof mustChangePassword === 'boolean') {
+        updateData.user_metadata.must_change_password = mustChangePassword;
+      }
       if (password && String(password).trim().length >= 6) {
         updateData.password = String(password).trim();
       }
 
       try {
         await adminClient.auth.admin.updateUserById(id, updateData);
-      } catch {}
+      } catch (err: any) {
+        console.warn('Erro ao atualizar auth user:', err);
+      }
 
       // Update profile
       const updateFields: any = {
@@ -203,10 +255,6 @@ export default async function handler(req: any, res: any) {
       if (unitIds) updateFields.unit_ids = unitIds;
       if (permissions) updateFields.permissions = permissions;
       if (typeof active === 'boolean') updateFields.active = active;
-      if (typeof mustChangePassword === 'boolean') {
-        updateFields.must_change_password = mustChangePassword;
-        updateData.user_metadata.must_change_password = mustChangePassword;
-      }
 
       const { data: updatedProf, error: updErr } = await adminClient
         .from('profiles')
@@ -217,6 +265,15 @@ export default async function handler(req: any, res: any) {
 
       if (updErr) {
         return sendJson(500, { error: updErr.message });
+      }
+
+      if (typeof mustChangePassword === 'boolean') {
+        try {
+          await adminClient.from('profiles').update({ must_change_password: mustChangePassword }).eq('id', id);
+        } catch {}
+        try {
+          await adminClient.from('system_users').update({ must_change_password: mustChangePassword }).eq('id', id);
+        } catch {}
       }
 
       // Update system_users

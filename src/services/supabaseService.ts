@@ -373,7 +373,24 @@ export const supabaseService = {
   async fetchUsers(): Promise<User[] | null> {
     if (!supabase || !isSupabaseConfigured()) return null;
 
-    // Tenta carregar primeiro da tabela oficial 'profiles'
+    // 1. Tenta carregar via endpoint administrativo Serverless com metadados do Auth
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      const token = session?.access_token;
+      if (token) {
+        const res = await fetch('/api/admin-users', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const apiUsers = await res.json();
+          if (Array.isArray(apiUsers) && apiUsers.length > 0) {
+            return apiUsers;
+          }
+        }
+      }
+    } catch {}
+
+    // 2. Tenta carregar da tabela oficial 'profiles'
     try {
       const { data: profs, error: profErr } = await supabase.from('profiles').select('*');
       if (!profErr && profs && profs.length > 0) {
@@ -396,7 +413,7 @@ export const supabaseService = {
           email: r.email,
           createdAt: r.created_at,
           lastLoginAt: undefined,
-          mustChangePassword: Boolean(r.must_change_password ?? suMap[r.id]),
+          mustChangePassword: Boolean(r.must_change_password || suMap[r.id]),
         }));
       }
     } catch {
@@ -434,6 +451,14 @@ export const supabaseService = {
           try {
             const { data: su } = await supabase.from('system_users').select('must_change_password').eq('id', userId).maybeSingle();
             if (su?.must_change_password) mustChange = true;
+          } catch {}
+        }
+        if (!mustChange) {
+          try {
+            const session = (await supabase.auth.getSession()).data.session;
+            if (session?.user?.id === userId && (session.user.user_metadata?.must_change_password || session.user.user_metadata?.force_change_password)) {
+              mustChange = true;
+            }
           } catch {}
         }
 
@@ -610,7 +635,6 @@ export const supabaseService = {
     if (u.unitIds) updateFields.unit_ids = u.unitIds;
     if (u.permissions) updateFields.permissions = u.permissions;
     if (typeof u.active === 'boolean') updateFields.active = u.active;
-    if (typeof u.mustChangePassword === 'boolean') updateFields.must_change_password = u.mustChangePassword;
 
     const { data, error } = await supabase
       .from('profiles')
@@ -620,6 +644,9 @@ export const supabaseService = {
       .single();
 
     if (typeof u.mustChangePassword === 'boolean') {
+      try {
+        await supabase.from('profiles').update({ must_change_password: u.mustChangePassword }).eq('id', u.id);
+      } catch {}
       try {
         await supabase.from('system_users').update({ must_change_password: u.mustChangePassword }).eq('id', u.id);
       } catch {}

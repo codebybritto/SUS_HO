@@ -73,9 +73,9 @@ export const buildUserFromAuthAndProfile = (authUser: any, profile?: any): User 
     profile?.unit_ids || authUser.user_metadata?.unit_ids || ['unit-lagos', 'unit-sjm', 'unit-mage'];
 
   const mustChange = Boolean(
-    profile?.mustChangePassword ??
-    profile?.must_change_password ??
-    authUser?.user_metadata?.must_change_password ??
+    profile?.mustChangePassword ||
+    profile?.must_change_password ||
+    authUser?.user_metadata?.must_change_password ||
     authUser?.user_metadata?.force_change_password
   );
 
@@ -327,6 +327,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const authenticatedUser = buildUserFromAuthAndProfile(data.user, profile);
+      if (data.user?.user_metadata?.must_change_password) {
+        authenticatedUser.mustChangePassword = true;
+      }
       setCurrentUser(authenticatedUser);
       storageService.setCurrentUser(authenticatedUser);
       setSessionExpiredMessage(null);

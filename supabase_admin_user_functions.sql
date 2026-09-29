@@ -7,6 +7,10 @@
 -- 0. Certifica extensão pgcrypto ativa
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
 
+-- 0.1. Garante coluna must_change_password nas tabelas profiles e system_users
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT false;
+ALTER TABLE public.system_users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT false;
+
 -- 1. Garante que a função is_admin() existe e valida corretamente o administrador
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN AS $$
@@ -29,7 +33,8 @@ CREATE OR REPLACE FUNCTION public.admin_create_user(
   new_password TEXT,
   new_role TEXT,
   new_unit_ids JSONB,
-  new_permissions JSONB
+  new_permissions JSONB,
+  new_must_change BOOLEAN DEFAULT false
 )
 RETURNS JSONB AS $$
 DECLARE
@@ -56,6 +61,7 @@ BEGIN
   enc_pw := extensions.crypt(new_password, extensions.gen_salt('bf', 10));
 
   -- 2.1. Insere credenciais oficiais no auth.users compatível com GoTrue
+  -- NOTA: Não incluímos confirmed_at pois em versões modernas do Supabase trata-se de coluna gerada
   INSERT INTO auth.users (
     id,
     instance_id,
@@ -64,7 +70,6 @@ BEGIN
     email,
     encrypted_password,
     email_confirmed_at,
-    confirmed_at,
     phone,
     confirmation_token,
     recovery_token,
@@ -82,7 +87,6 @@ BEGIN
     new_email,
     enc_pw,
     NOW(),
-    NOW(),
     '',
     '',
     '',
@@ -94,7 +98,8 @@ BEGIN
       'login', new_login,
       'role', new_role,
       'unit_ids', new_unit_ids,
-      'permissions', new_permissions
+      'permissions', new_permissions,
+      'must_change_password', COALESCE(new_must_change, false)
     ),
     NOW(),
     NOW()
@@ -123,9 +128,9 @@ BEGIN
 
   -- 2.3. Insere ou atualiza o perfil em profiles
   INSERT INTO public.profiles (
-    id, name, login, email, role, unit_ids, permissions, active, created_at, updated_at
+    id, name, login, email, role, unit_ids, permissions, active, must_change_password, created_at, updated_at
   ) VALUES (
-    new_id, new_name, new_login, new_email, new_role, new_unit_ids, new_permissions, true, NOW(), NOW()
+    new_id, new_name, new_login, new_email, new_role, new_unit_ids, new_permissions, true, COALESCE(new_must_change, false), NOW(), NOW()
   )
   ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
@@ -135,13 +140,14 @@ BEGIN
     unit_ids = EXCLUDED.unit_ids,
     permissions = EXCLUDED.permissions,
     active = true,
+    must_change_password = EXCLUDED.must_change_password,
     updated_at = NOW();
 
   -- 2.4. Insere em system_users para compatibilidade legada
   INSERT INTO public.system_users (
-    id, name, login, role, active, unit_ids, permissions, email, created_at
+    id, name, login, role, active, unit_ids, permissions, email, must_change_password, created_at
   ) VALUES (
-    new_id::text, new_name, new_login, new_role, true, new_unit_ids, new_permissions, new_email, NOW()::text
+    new_id::text, new_name, new_login, new_role, true, new_unit_ids, new_permissions, new_email, COALESCE(new_must_change, false), NOW()::text
   )
   ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
@@ -149,15 +155,27 @@ BEGIN
     role = EXCLUDED.role,
     unit_ids = EXCLUDED.unit_ids,
     permissions = EXCLUDED.permissions,
-    email = EXCLUDED.email;
+    email = EXCLUDED.email,
+    must_change_password = EXCLUDED.must_change_password;
 
   SELECT to_jsonb(p) INTO result FROM public.profiles p WHERE p.id = new_id;
   RETURN result;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 2.5. Garante coluna must_change_password na tabela profiles
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT false;
+-- Sobrecarga com 7 parâmetros para retrocompatibilidade
+CREATE OR REPLACE FUNCTION public.admin_create_user(
+  new_name TEXT,
+  new_login TEXT,
+  new_email TEXT,
+  new_password TEXT,
+  new_role TEXT,
+  new_unit_ids JSONB,
+  new_permissions JSONB
+)
+RETURNS JSONB AS $$
+  SELECT public.admin_create_user(new_name, new_login, new_email, new_password, new_role, new_unit_ids, new_permissions, false);
+$$ LANGUAGE sql SECURITY DEFINER;
 
 -- 3. Redefinição de senha de operador por administrador (com opção de forçar troca de senha no próximo login)
 CREATE OR REPLACE FUNCTION public.admin_reset_user_password(
@@ -226,10 +244,8 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 5. Permissões de execução para usuários autenticados e service_role
+GRANT EXECUTE ON FUNCTION public.admin_create_user(TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, JSONB, BOOLEAN) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.admin_create_user(TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, JSONB) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.admin_reset_user_password(UUID, TEXT) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.admin_reset_user_password(UUID, TEXT, BOOLEAN) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.admin_reset_user_password(UUID, TEXT) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.admin_delete_user(UUID) TO authenticated, service_role;
-
--- 6. Notifica o PostgREST para recarregar o cache de esquemas imediatamente
-NOTIFY pgrst, 'reload schema';

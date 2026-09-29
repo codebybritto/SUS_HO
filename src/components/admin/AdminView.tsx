@@ -869,6 +869,9 @@ export const AdminView: React.FC = () => {
           onReset={async (userId, newPass, forceChange) => {
             const success = await adminResetPassword(userId, newPass, forceChange);
             if (success) {
+              try {
+                await updateUser(userId, { mustChangePassword: forceChange });
+              } catch {}
               setIsResetPasswordModalOpen(false);
               setUserForPasswordReset(null);
             }
