@@ -5,13 +5,15 @@ Bem-vindo à documentação oficial do sistema. Para assegurar a correta utiliza
 
 ---
 
-## 📚 Manuais Disponíveis
+## 📚 Manuais Ilustrados Disponíveis
+
+Todos os manuais contam com **capturas visuais das telas**, tabelas explicativas, caixas de atenção e instruções em passos numerados simples:
 
 | Perfil | Documento | Principais Responsabilidades |
 | :--- | :--- | :--- |
-| **Atendente / Recepção** | [**`MANUAL_ATENDENTE.md`**](./MANUAL_ATENDENTE.md) | Cadastro de pacientes, busca ativa de contatos telefônicos, registro de faltas, evolução da situação do paciente e agendamentos. |
-| **Supervisora / Coordenação** | [**`MANUAL_SUPERVISORA.md`**](./MANUAL_SUPERVISORA.md) | Gestão e ordenamento da fila cirúrgica, priorizações clínicas (*Priority Override*), tratativa de casos retidos em Micrologos, emissão e exportação de relatórios (Excel/PDF) e manutenção de cadastros de apoio. |
-| **Administrador do Sistema** | [**`MANUAL_ADMINISTRADOR.md`**](./MANUAL_ADMINISTRADOR.md) | Gestão central de usuários e acessos (Supabase Auth), resets de senhas, configuração de polos/unidades e seus municípios, parametrização de regras automáticas e monitoramento da auditoria. |
+| **Atendente / Recepção** | [**`MANUAL_ATENDENTE.md`**](./MANUAL_ATENDENTE.md) | Passo a passo com telas do cadastro de pacientes, busca ativa de contatos, registro de faltas e atualizações de prontuário. |
+| **Supervisora / Coordenação** | [**`MANUAL_SUPERVISORA.md`**](./MANUAL_SUPERVISORA.md) | Guia ilustrado do painel executivo, ordenamento da fila cirúrgica, priorizações clínicas, tratativa de casos Micrologos e exportação Excel. |
+| **Administrador do Sistema** | [**`MANUAL_ADMINISTRADOR.md`**](./MANUAL_ADMINISTRADOR.md) | Guia completo de governança com telas de gestão de usuários, resets de senhas, configuração de polos e regras automáticas. |
 
 ---
 
