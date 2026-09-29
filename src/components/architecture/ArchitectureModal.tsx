@@ -294,7 +294,7 @@ export const ArchitectureModal: React.FC<ArchitectureModalProps> = ({ isOpen, on
               </p>
 
               <ul className="list-disc list-inside space-y-1.5 text-slate-600">
-                <li><strong>Relatórios com Filtros Combinados:</strong> Cruzamento de Unidade, Procedimento, Faixa Etária, Município de Residência, Status de Regulação e Contagem de Faltas/Contatos.</li>
+                <li><strong>Relatórios com Filtros Combinados:</strong> Cruzamento de Unidade, Procedimento, Faixa Etária, Município de Atendimento, Status de Regulação e Contagem de Faltas/Contatos.</li>
                 <li><strong>Exportação Universal:</strong> Geração de planilhas compatíveis com Microsoft Excel e formato impresso/PDF oficial com cabeçalho limpo e totalizadores.</li>
                 <li><strong>Dashboard de Controle de Gargalos:</strong> Indicadores em tempo real para identificação imediata de casos urgentes, pacientes que caíram em Micrologos e absenteísmo por procedimento.</li>
               </ul>

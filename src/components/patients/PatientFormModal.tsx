@@ -386,7 +386,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Município de Residência *
+                Município de Atendimento *
               </label>
               <select
                 value={city}
@@ -394,7 +394,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                 className="w-full h-10 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:ring-1 focus:ring-cyan-500 font-medium cursor-pointer"
                 required
               >
-                <option value="">-- Selecione o município atendido --</option>
+                <option value="">-- Selecione o município de atendimento --</option>
 
                 {/* Caso o paciente já possua um município salvo que não conste na lista, mantém para preservar dados */}
                 {city && !unitAttendedMunicipalities.includes(city) && (
