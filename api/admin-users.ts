@@ -1,8 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || '';
+const OFFICIAL_URL = 'https://jqgpxlydbijpujjnntci.supabase.co';
+const OFFICIAL_SERVICE_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxZ3B4bHlkYmlqcHVqam5udGNpIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDM2MTM2OSwiZXhwIjoyMTA1OTM3MzY5fQ.0mf0xcclTQPiQLjMlDG6oeN_JJQQAOH60q_XLxUqZRw';
+const OFFICIAL_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxZ3B4bHlkYmlqcHVqam5udGNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzNjEzNjksImV4cCI6MjEwNTkzNzM2OX0.FBf83CHVqWtznGxRFEAV4zAE57DpbCfhWOQabopWd70';
+
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || OFFICIAL_URL;
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || OFFICIAL_SERVICE_KEY;
+const ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || OFFICIAL_ANON_KEY;
 
 export default async function handler(req: any, res: any) {
   // CORS Headers
@@ -181,12 +187,6 @@ export default async function handler(req: any, res: any) {
         return sendJson(500, { error: `Falha ao criar perfil: ${profErr.message}` });
       }
 
-      if (typeof mustChangePassword === 'boolean') {
-        try {
-          await adminClient.from('profiles').update({ must_change_password: mustChangePassword }).eq('id', authId);
-        } catch {}
-      }
-
       // Also upsert into system_users for compatibility
       try {
         await adminClient.from('system_users').upsert({
@@ -224,26 +224,31 @@ export default async function handler(req: any, res: any) {
         return sendJson(400, { error: 'ID do usuário é obrigatório para atualização.' });
       }
 
+      if (password && String(password).trim().length > 0 && String(password).trim().length < 6) {
+        return sendJson(400, { error: 'A nova senha deve possuir no mínimo 6 caracteres.' });
+      }
+
+      const { data: targetUser } = await adminClient.auth.admin.getUserById(id);
+      const currentMeta = targetUser?.user?.user_metadata || {};
+
       // Update auth user if password or metadata changed
       const updateData: any = {
         user_metadata: {
-          name: name ? String(name).trim() : undefined,
-          role: role || undefined,
-          unit_ids: Array.isArray(unitIds) ? unitIds : undefined,
-          permissions: permissions || undefined,
+          ...currentMeta,
+          ...(name ? { name: String(name).trim() } : {}),
+          ...(role ? { role } : {}),
+          ...(Array.isArray(unitIds) ? { unit_ids: unitIds } : {}),
+          ...(permissions ? { permissions } : {}),
+          ...(typeof mustChangePassword === 'boolean' ? { must_change_password: mustChangePassword } : {}),
         },
       };
-      if (typeof mustChangePassword === 'boolean') {
-        updateData.user_metadata.must_change_password = mustChangePassword;
-      }
       if (password && String(password).trim().length >= 6) {
         updateData.password = String(password).trim();
       }
 
-      try {
-        await adminClient.auth.admin.updateUserById(id, updateData);
-      } catch (err: any) {
-        console.warn('Erro ao atualizar auth user:', err);
+      const { error: authUpdErr } = await adminClient.auth.admin.updateUserById(id, updateData);
+      if (authUpdErr) {
+        return sendJson(500, { error: `Erro ao atualizar credenciais do usuário: ${authUpdErr.message}` });
       }
 
       // Update profile
@@ -268,9 +273,6 @@ export default async function handler(req: any, res: any) {
       }
 
       if (typeof mustChangePassword === 'boolean') {
-        try {
-          await adminClient.from('profiles').update({ must_change_password: mustChangePassword }).eq('id', id);
-        } catch {}
         try {
           await adminClient.from('system_users').update({ must_change_password: mustChangePassword }).eq('id', id);
         } catch {}
@@ -348,9 +350,6 @@ export default async function handler(req: any, res: any) {
         return sendJson(500, { error: resetErr.message });
       }
 
-      try {
-        await adminClient.from('profiles').update({ must_change_password: shouldForce }).eq('id', id);
-      } catch {}
       try {
         await adminClient.from('system_users').update({ must_change_password: shouldForce }).eq('id', id);
       } catch {}

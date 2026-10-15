@@ -72,12 +72,16 @@ export const buildUserFromAuthAndProfile = (authUser: any, profile?: any): User 
   const unitIds: string[] =
     profile?.unit_ids || authUser.user_metadata?.unit_ids || ['unit-lagos', 'unit-sjm', 'unit-mage'];
 
-  const mustChange = Boolean(
-    profile?.mustChangePassword ||
-    profile?.must_change_password ||
-    authUser?.user_metadata?.must_change_password ||
-    authUser?.user_metadata?.force_change_password
-  );
+  let mustChange = false;
+  if (typeof authUser?.user_metadata?.must_change_password === 'boolean') {
+    mustChange = authUser.user_metadata.must_change_password;
+  } else if (typeof authUser?.user_metadata?.force_change_password === 'boolean') {
+    mustChange = authUser.user_metadata.force_change_password;
+  } else if (typeof profile?.mustChangePassword === 'boolean') {
+    mustChange = profile.mustChangePassword;
+  } else if (typeof profile?.must_change_password === 'boolean') {
+    mustChange = profile.must_change_password;
+  }
 
   return {
     id: authUser.id,
@@ -367,11 +371,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const changeOwnPassword = async (newPassword: string): Promise<boolean> => {
     if (!currentUser) return false;
+    if (!newPassword || newPassword.trim().length < 6) {
+      console.error('A senha deve possuir no mínimo 6 caracteres.');
+      return false;
+    }
     if (!supabase || !isSupabaseConfigured()) return false;
 
     try {
+      const cleanPass = newPassword.trim();
       const { error } = await supabase.auth.updateUser({
-        password: newPassword,
+        password: cleanPass,
         data: { must_change_password: false },
       });
       if (error) {
@@ -379,9 +388,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      try {
-        await supabase.from('profiles').update({ must_change_password: false }).eq('id', currentUser.id);
-      } catch {}
       try {
         await supabase.from('system_users').update({ must_change_password: false }).eq('id', currentUser.id);
       } catch {}

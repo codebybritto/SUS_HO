@@ -39,6 +39,7 @@ export const AdminView: React.FC = () => {
   const {
     users,
     units,
+    reloadFromSupabase,
     municipalities,
     procedures,
     doctors,
@@ -851,9 +852,7 @@ export const AdminView: React.FC = () => {
           onReset={async (userId, newPass, forceChange) => {
             const success = await adminResetPassword(userId, newPass, forceChange);
             if (success) {
-              try {
-                await updateUser(userId, { mustChangePassword: forceChange });
-              } catch {}
+              await reloadFromSupabase();
               setIsResetPasswordModalOpen(false);
               setUserForPasswordReset(null);
             }
@@ -923,6 +922,10 @@ const UserModal: React.FC<{
     }
     if (!user && password.trim().length < 6) {
       alert('A senha de acesso inicial deve conter no mínimo 6 caracteres.');
+      return;
+    }
+    if (user && password.trim() && password.trim().length < 6) {
+      alert('A nova senha de acesso deve conter no mínimo 6 caracteres.');
       return;
     }
     if (selectedUnitIds.length === 0) {

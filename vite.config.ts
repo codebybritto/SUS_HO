@@ -7,32 +7,37 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 function adminApiDevPlugin(): Plugin {
+  const handlerMiddleware = async (req: any, res: any) => {
+    try {
+      let body = '';
+      req.on('data', (chunk: any) => {
+        body += chunk;
+      });
+      req.on('end', async () => {
+        if (body) {
+          try {
+            req.body = JSON.parse(body);
+          } catch {
+            req.body = body;
+          }
+        }
+        const { default: handler } = await import('./api/admin-users.ts');
+        await handler(req, res);
+      });
+    } catch (e: any) {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: e.message }));
+    }
+  };
+
   return {
     name: 'admin-api-dev-middleware',
     configureServer(server) {
-      server.middlewares.use('/api/admin-users', async (req, res) => {
-        try {
-          let body = '';
-          req.on('data', (chunk) => {
-            body += chunk;
-          });
-          req.on('end', async () => {
-            if (body) {
-              try {
-                (req as any).body = JSON.parse(body);
-              } catch {
-                (req as any).body = body;
-              }
-            }
-            const { default: handler } = await import('./api/admin-users.ts');
-            await handler(req, res);
-          });
-        } catch (e: any) {
-          res.statusCode = 500;
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ error: e.message }));
-        }
-      });
+      server.middlewares.use('/api/admin-users', handlerMiddleware);
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use('/api/admin-users', handlerMiddleware);
     },
   };
 }

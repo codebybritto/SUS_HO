@@ -512,7 +512,6 @@ export const supabaseService = {
         const savedId = data.id;
         try {
           await supabase.from('system_users').update({ must_change_password: Boolean(u.mustChangePassword) }).eq('id', savedId);
-          await supabase.from('profiles').update({ must_change_password: Boolean(u.mustChangePassword) }).eq('id', savedId);
         } catch {}
 
         return {
@@ -557,7 +556,6 @@ export const supabaseService = {
         const savedId = rpcData.id;
         try {
           await supabase.from('system_users').update({ must_change_password: Boolean(u.mustChangePassword) }).eq('id', savedId);
-          await supabase.from('profiles').update({ must_change_password: Boolean(u.mustChangePassword) }).eq('id', savedId);
         } catch {}
 
         return {
@@ -608,7 +606,6 @@ export const supabaseService = {
         if (typeof u.mustChangePassword === 'boolean') {
           try {
             await supabase.from('system_users').update({ must_change_password: u.mustChangePassword }).eq('id', u.id);
-            await supabase.from('profiles').update({ must_change_password: u.mustChangePassword }).eq('id', u.id);
           } catch {}
         }
         return {
@@ -623,8 +620,30 @@ export const supabaseService = {
           createdAt: data.createdAt,
           mustChangePassword: typeof u.mustChangePassword === 'boolean' ? u.mustChangePassword : data.mustChangePassword,
         };
+      } else {
+        const errJson = await res.json().catch(() => null);
+        if (errJson?.error) {
+          throw new Error(errJson.error);
+        }
       }
-    } catch {}
+    } catch (fetchErr: any) {
+      if (fetchErr.message && !fetchErr.message.includes('fetch') && !fetchErr.message.includes('Failed') && !fetchErr.message.includes('JSON')) {
+        throw fetchErr;
+      }
+    }
+
+    // Se informou senha e é o próprio usuário logado, atualiza via cliente de autenticação
+    if (u.password && session?.user?.id === u.id) {
+      const { error: ownErr } = await supabase.auth.updateUser({
+        password: u.password,
+        data: typeof u.mustChangePassword === 'boolean' ? { must_change_password: u.mustChangePassword } : undefined,
+      });
+      if (ownErr) {
+        throw new Error(`Erro ao atualizar sua senha: ${ownErr.message}`);
+      }
+    } else if (u.password && session?.user?.id !== u.id) {
+      throw new Error('Não foi possível atualizar a senha do operador: serviço de autenticação administrativa indisponível.');
+    }
 
     // 2. Fallback direto via Supabase client (RLS permite que admin atualize perfis)
     const updateFields: any = {
@@ -645,9 +664,6 @@ export const supabaseService = {
 
     if (typeof u.mustChangePassword === 'boolean') {
       try {
-        await supabase.from('profiles').update({ must_change_password: u.mustChangePassword }).eq('id', u.id);
-      } catch {}
-      try {
         await supabase.from('system_users').update({ must_change_password: u.mustChangePassword }).eq('id', u.id);
       } catch {}
     }
@@ -664,7 +680,7 @@ export const supabaseService = {
       permissions: data.permissions || {},
       active: data.active,
       createdAt: data.created_at,
-      mustChangePassword: typeof u.mustChangePassword === 'boolean' ? u.mustChangePassword : Boolean(data.must_change_password),
+      mustChangePassword: typeof u.mustChangePassword === 'boolean' ? u.mustChangePassword : false,
     };
   },
 
@@ -692,13 +708,35 @@ export const supabaseService = {
       if (res.ok) {
         try {
           await supabase.from('system_users').update({ must_change_password: forceChangeOnNextLogin }).eq('id', userId);
-          await supabase.from('profiles').update({ must_change_password: forceChangeOnNextLogin }).eq('id', userId);
+        } catch {}
+        return true;
+      } else {
+        const errJson = await res.json().catch(() => null);
+        if (errJson?.error) {
+          throw new Error(errJson.error);
+        }
+      }
+    } catch (err: any) {
+      if (err.message && !err.message.includes('fetch') && !err.message.includes('Failed')) {
+        throw err;
+      }
+    }
+
+    // 2. Se for o próprio usuário logado, atualiza via cliente direto de autenticação
+    if (session?.user?.id === userId) {
+      const { error: selfErr } = await supabase.auth.updateUser({
+        password: newPassword,
+        data: { must_change_password: forceChangeOnNextLogin },
+      });
+      if (!selfErr) {
+        try {
+          await supabase.from('system_users').update({ must_change_password: forceChangeOnNextLogin }).eq('id', userId);
         } catch {}
         return true;
       }
-    } catch {}
+    }
 
-    // 2. Fallback via RPC admin_reset_user_password
+    // 3. Fallback via RPC admin_reset_user_password
     try {
       const { error: rpcErr } = await supabase.rpc('admin_reset_user_password', {
         target_user_id: userId,
@@ -707,17 +745,9 @@ export const supabaseService = {
       if (!rpcErr) {
         try {
           await supabase.from('system_users').update({ must_change_password: forceChangeOnNextLogin }).eq('id', userId);
-          await supabase.from('profiles').update({ must_change_password: forceChangeOnNextLogin }).eq('id', userId);
         } catch {}
         return true;
       }
-    } catch {}
-
-    // Atualiza diretamente no banco se permitido
-    try {
-      await supabase.from('system_users').update({ must_change_password: forceChangeOnNextLogin }).eq('id', userId);
-      await supabase.from('profiles').update({ must_change_password: forceChangeOnNextLogin }).eq('id', userId);
-      return true;
     } catch {}
 
     return false;

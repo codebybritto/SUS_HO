@@ -78,8 +78,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearchSelectPatient }) => {
 
   const handleSaveOwnPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPassword.length < 4) {
-      setPasswordChangeMessage({ type: 'error', text: 'A senha deve conter no mínimo 4 caracteres.' });
+    if (newPassword.length < 6) {
+      setPasswordChangeMessage({ type: 'error', text: 'A senha deve conter no mínimo 6 caracteres.' });
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -514,7 +514,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearchSelectPatient }) => {
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Mínimo 4 caracteres"
+                  placeholder="Mínimo 6 caracteres"
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
                   required
                 />
