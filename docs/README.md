@@ -5,15 +5,16 @@ Bem-vindo à documentação oficial do sistema. Para assegurar a correta utiliza
 
 ---
 
-## 📚 Manuais Ilustrados Disponíveis
+## 📚 Manuais Ilustrados Disponíveis (Formatos Markdown e PDF)
 
-Todos os manuais contam com **capturas visuais das telas**, tabelas explicativas, caixas de atenção e instruções em passos numerados simples:
+Todos os manuais contam com **capturas visuais reais das telas**, tabelas explicativas, caixas de atenção e instruções em passos numerados simples. Estão disponíveis tanto para leitura online em `.md` quanto em **PDF de alta resolução para impressão e distribuição**:
 
-| Perfil | Documento | Principais Responsabilidades |
-| :--- | :--- | :--- |
-| **Atendente / Recepção** | [**`MANUAL_ATENDENTE.md`**](./MANUAL_ATENDENTE.md) | Passo a passo com telas do cadastro de pacientes, busca ativa de contatos, registro de faltas e atualizações de prontuário. |
-| **Supervisora / Coordenação** | [**`MANUAL_SUPERVISORA.md`**](./MANUAL_SUPERVISORA.md) | Guia ilustrado do painel executivo, ordenamento da fila cirúrgica, priorizações clínicas, tratativa de casos Micrologos e exportação Excel. |
-| **Administrador do Sistema** | [**`MANUAL_ADMINISTRADOR.md`**](./MANUAL_ADMINISTRADOR.md) | Guia completo de governança com telas de gestão de usuários, resets de senhas, configuração de polos e regras automáticas. |
+| Perfil | Documento Online (.md) | Versão em PDF Pronto para Impressão | Principais Responsabilidades |
+| :--- | :--- | :--- | :--- |
+| **Atendente / Recepção** | [**`MANUAL_ATENDENTE.md`**](./MANUAL_ATENDENTE.md) | 📄 [**`MANUAL_ATENDENTE.pdf`**](./MANUAL_ATENDENTE.pdf) | Passo a passo com telas do cadastro de pacientes, busca ativa de contatos, registro de faltas e conclusões de atendimento. |
+| **Supervisora / Coordenação** | [**`MANUAL_SUPERVISORA.md`**](./MANUAL_SUPERVISORA.md) | 📄 [**`MANUAL_SUPERVISORA.pdf`**](./MANUAL_SUPERVISORA.pdf) | Guia ilustrado do painel executivo, ordenamento da fila cirúrgica, priorizações clínicas, tratativa de casos Micrologos e relatórios. |
+| **Administrador do Sistema** | [**`MANUAL_ADMINISTRADOR.md`**](./MANUAL_ADMINISTRADOR.md) | 📄 [**`MANUAL_ADMINISTRADOR.pdf`**](./MANUAL_ADMINISTRADOR.pdf) | Guia completo de governança com gestão de operadores, resets de senhas, configuração de polos e regras automáticas. |
+| **Manual Geral Integrado** | — | 📑 [**`MANUAL_COMPLETO_GERAL.pdf`**](./MANUAL_COMPLETO_GERAL.pdf) | Documento unificado consolidando todos os 3 manuais em um único arquivo completo. |
 
 ---
 
