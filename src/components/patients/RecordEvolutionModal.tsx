@@ -175,13 +175,13 @@ export const RecordEvolutionModal: React.FC<RecordEvolutionModalProps> = ({
             <div className="p-3.5 bg-teal-50 border border-teal-200 rounded-lg space-y-2.5">
               <div className="text-xs font-bold text-teal-900 flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-teal-700" />
-                <span>Dados Cirúrgicos:</span>
+                <span>Dados de Agendamento:</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
                   <label className="block text-[11px] font-semibold text-teal-800 mb-1 flex items-center gap-1">
                     <Calendar className="w-3 h-3 text-teal-600" />
-                    <span>Data da Cirurgia</span>
+                    <span>Data de Agendamento</span>
                   </label>
                   <input
                     type="date"
@@ -193,7 +193,7 @@ export const RecordEvolutionModal: React.FC<RecordEvolutionModalProps> = ({
                 <div>
                   <label className="block text-[11px] font-semibold text-teal-800 mb-1 flex items-center gap-1">
                     <Clock className="w-3 h-3 text-teal-600" />
-                    <span>Hora da Cirurgia</span>
+                    <span>Hora de Agendamento</span>
                   </label>
                   <input
                     type="time"
@@ -204,10 +204,10 @@ export const RecordEvolutionModal: React.FC<RecordEvolutionModalProps> = ({
                 </div>
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-teal-800 mb-1">Local / Sala de Cirurgia</label>
+                <label className="block text-[11px] font-semibold text-teal-800 mb-1">Local / Sala de Agendamento</label>
                 <input
                   type="text"
-                  placeholder="Ex: Bloco Cirúrgico Central - Sala 1"
+                  placeholder="Ex: Bloco Cirúrgico Central - Sala 1 / Ambulatório"
                   value={scheduledLocation}
                   onChange={(e) => setScheduledLocation(e.target.value)}
                   className="w-full bg-white border border-teal-300 rounded-md px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-teal-500 placeholder:text-slate-400"

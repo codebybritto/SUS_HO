@@ -829,7 +829,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const dateStr = formatDateBR(complementaryInfo.scheduledDate);
             const timeStr = complementaryInfo.scheduledTime ? ` às ${complementaryInfo.scheduledTime}` : '';
             const locStr = complementaryInfo.scheduledLocation ? ` no local ${complementaryInfo.scheduledLocation}` : '';
-            timelineDesc = `Cirurgia agendada para ${dateStr}${timeStr}${locStr}. Obs: ${notes}`;
+            timelineDesc = `Agendamento marcado para ${dateStr}${timeStr}${locStr}. Obs: ${notes}`;
           } else {
             timelineDesc = `Evolução: Situação alterada para "${updatedStatus}". Obs: ${notes}`;
           }
