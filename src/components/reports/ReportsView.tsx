@@ -116,66 +116,74 @@ export const ReportsView: React.FC = () => {
 
   // Combined Filter logic (Faixa etária removed)
   const filteredPatients = useMemo(() => {
-    return patients.filter((p) => {
-      if (p.isDeleted) return false;
-      if (!allowedUnitIds.includes(p.unitId)) return false;
+    return patients
+      .filter((p) => {
+        if (p.isDeleted) return false;
+        if (!allowedUnitIds.includes(p.unitId)) return false;
 
-      // Unit
-      if (selectedUnit !== 'ALL' && p.unitId !== selectedUnit) return false;
+        // Unit
+        if (selectedUnit !== 'ALL' && p.unitId !== selectedUnit) return false;
 
-      // Dates (period)
-      if (startDate && p.requestedDate < startDate) return false;
-      if (endDate && p.requestedDate > endDate) return false;
+        // Dates (period)
+        if (startDate && p.requestedDate < startDate) return false;
+        if (endDate && p.requestedDate > endDate) return false;
 
-      // Status
-      if (selectedStatus !== 'ALL') {
-        if (selectedStatus === 'Aguardando Micrologos') {
-          if (p.currentStatus !== 'Aguardando Micrologos' && p.currentStatus !== 'Micrologos') {
+        // Status
+        if (selectedStatus !== 'ALL') {
+          if (selectedStatus === 'Aguardando Micrologos') {
+            if (p.currentStatus !== 'Aguardando Micrologos' && p.currentStatus !== 'Micrologos') {
+              return false;
+            }
+          } else if (selectedStatus === 'SEM_INTERACAO') {
+            if (p.contactAttempts.length !== 0 || p.evolutions.length !== 0 || p.totalAbsences !== 0) {
+              return false;
+            }
+          } else if (p.currentStatus !== selectedStatus) {
             return false;
           }
-        } else if (selectedStatus === 'SEM_INTERACAO') {
-          if (p.contactAttempts.length !== 0 || p.evolutions.length !== 0 || p.totalAbsences !== 0) {
-            return false;
-          }
-        } else if (p.currentStatus !== selectedStatus) {
-          return false;
         }
-      }
 
-      // Procedure (check across multiple procedures)
-      if (selectedProcedure !== 'ALL') {
-        const matchesPrimary = p.requestedProcedureId === selectedProcedure;
-        const matchesList = p.procedures?.some((pr) => pr.procedureId === selectedProcedure);
-        if (!matchesPrimary && !matchesList) return false;
-      }
+        // Procedure (check across multiple procedures)
+        if (selectedProcedure !== 'ALL') {
+          const matchesPrimary = p.requestedProcedureId === selectedProcedure;
+          const matchesList = p.procedures?.some((pr) => pr.procedureId === selectedProcedure);
+          if (!matchesPrimary && !matchesList) return false;
+        }
 
-      // Doctor
-      if (selectedDoctor !== 'ALL' && p.requestingDoctorId !== selectedDoctor) return false;
+        // Doctor
+        if (selectedDoctor !== 'ALL' && p.requestingDoctorId !== selectedDoctor) return false;
 
-      // City
-      if (selectedCity !== 'ALL' && p.city !== selectedCity) return false;
+        // City
+        if (selectedCity !== 'ALL' && p.city !== selectedCity) return false;
 
-      // Urgency
-      if (selectedUrgency === 'urgent' && !p.isUrgent) return false;
-      if (selectedUrgency === 'normal' && p.isUrgent) return false;
+        // Urgency
+        if (selectedUrgency === 'urgent' && !p.isUrgent) return false;
+        if (selectedUrgency === 'normal' && p.isUrgent) return false;
 
-      // Absences
-      if (selectedAbsences === '0' && p.totalAbsences !== 0) return false;
-      if (selectedAbsences === '1' && p.totalAbsences !== 1) return false;
-      if (selectedAbsences === '2plus' && p.totalAbsences < 2) return false;
+        // Absences
+        if (selectedAbsences === '0' && p.totalAbsences !== 0) return false;
+        if (selectedAbsences === '1' && p.totalAbsences !== 1) return false;
+        if (selectedAbsences === '2plus' && p.totalAbsences < 2) return false;
 
-      // Contact attempts
-      if (selectedContacts === '0' && p.contactAttempts.length !== 0) return false;
-      if (selectedContacts === '1' && p.contactAttempts.length !== 1) return false;
-      if (selectedContacts === '2' && p.contactAttempts.length !== 2) return false;
-      if (selectedContacts === '3' && p.contactAttempts.length !== 3) return false;
+        // Contact attempts
+        if (selectedContacts === '0' && p.contactAttempts.length !== 0) return false;
+        if (selectedContacts === '1' && p.contactAttempts.length !== 1) return false;
+        if (selectedContacts === '2' && p.contactAttempts.length !== 2) return false;
+        if (selectedContacts === '3' && p.contactAttempts.length !== 3) return false;
 
-      // Followup
-      if (selectedFollowup === 'yes' && !p.hasFollowup) return false;
-      if (selectedFollowup === 'no' && p.hasFollowup) return false;
+        // Followup
+        if (selectedFollowup === 'yes' && !p.hasFollowup) return false;
+        if (selectedFollowup === 'no' && p.hasFollowup) return false;
 
-      return true;
-    });
+        return true;
+      })
+      .sort((a, b) => {
+        // Ordenação independente do filtro por ordem de cadastro: mais antigos primeiro (1º cadastrado primeiro)
+        const timeA = new Date(a.createdAt || a.requestedDate || 0).getTime();
+        const timeB = new Date(b.createdAt || b.requestedDate || 0).getTime();
+        if (timeA !== timeB) return timeA - timeB;
+        return a.name.localeCompare(b.name, 'pt-BR');
+      });
   }, [
     patients,
     allowedUnitIds,
@@ -430,7 +438,7 @@ export const ReportsView: React.FC = () => {
 
   // Export real Excel .xlsx file with clean formatting and columns
   const handleExportXLSX = () => {
-    const data = filteredPatients.map((p) => {
+    const data = filteredPatients.map((p, idx) => {
       const age = calculateAge(p.birthDate);
       const procNames =
         p.procedures && p.procedures.length > 0
@@ -438,7 +446,9 @@ export const ReportsView: React.FC = () => {
           : p.requestedProcedureName;
 
       return {
+        'Nº': idx + 1,
         'Nome do Paciente': p.name,
+        'Data de Cadastro': p.createdAt ? formatDateBR(p.createdAt.split('T')[0]) : '-',
         'Data de Nascimento': formatDateBR(p.birthDate),
         'Idade': age !== null ? `${age} anos` : 'N/D',
         'Procedimento(s) Solicitado(s)': procNames,
@@ -458,7 +468,9 @@ export const ReportsView: React.FC = () => {
 
     const ws = XLSX.utils.json_to_sheet(data);
     ws['!cols'] = [
+      { wch: 6 },  // Nº
       { wch: 32 }, // Nome
+      { wch: 16 }, // Data Cadastro
       { wch: 14 }, // Data Nasc
       { wch: 10 }, // Idade
       { wch: 42 }, // Procedimentos
@@ -468,11 +480,11 @@ export const ReportsView: React.FC = () => {
       { wch: 14 }, // Data Solicitada
       { wch: 22 }, // Status
       { wch: 10 }, // Urgente
-      { wch: 10 }, // Faltas
+      { wch: 8 },  // Faltas
       { wch: 12 }, // Contatos
-      { wch: 14 }, // Acomp
-      { wch: 16 }, // Data Acomp
-      { wch: 32 }, // Obs
+      { wch: 20 }, // Possui Acompanhamento
+      { wch: 18 }, // Data Acompanhamento
+      { wch: 35 }, // Observações
     ];
 
     const wb = XLSX.utils.book_new();
@@ -790,18 +802,22 @@ export const ReportsView: React.FC = () => {
 
       {/* Styled Data Table with CNS/CPF removed & multiple procedures */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between">
+        <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex flex-wrap items-center justify-between gap-2">
           <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
             Listagem Formatada dos Pacientes ({filteredPatients.length})
           </span>
-          <span className="text-[11px] text-slate-500">Tabela de conferência</span>
+          <span className="text-[11px] font-semibold text-cyan-800 bg-cyan-50 border border-cyan-200 px-2.5 py-0.5 rounded-full">
+            Ordem de Cadastro (Primeiros Cadastrados)
+          </span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-xs text-left">
             <thead className="bg-slate-900 text-white font-semibold uppercase tracking-wider text-[11px]">
               <tr>
+                <th className="py-3 px-3 text-center w-10">#</th>
                 <th className="py-3 px-4">Nome do Paciente</th>
+                <th className="py-3 px-3">Data Cadastro</th>
                 <th className="py-3 px-3">Nascimento (Idade)</th>
                 <th className="py-3 px-3">Procedimento(s) Solicitado(s)</th>
                 <th className="py-3 px-3">Município</th>
@@ -814,17 +830,21 @@ export const ReportsView: React.FC = () => {
             <tbody className="divide-y divide-slate-200">
               {filteredPatients.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-400">
+                  <td colSpan={10} className="py-8 text-center text-slate-400">
                     Nenhum paciente localizado com a combinação de filtros selecionada.
                   </td>
                 </tr>
               ) : (
-                filteredPatients.map((p) => {
+                filteredPatients.map((p, idx) => {
                   const statusStyle = getStatusStyle(p.currentStatus);
                   const age = calculateAge(p.birthDate);
+                  const regDate = p.createdAt ? formatDateBR(p.createdAt.split('T')[0]) : '-';
 
                   return (
                     <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-3 px-3 text-center text-slate-500 font-bold font-mono">
+                        {idx + 1}
+                      </td>
                       <td className="py-3 px-4 font-semibold text-slate-900">
                         {p.name}
                         {p.hasFollowup && (
@@ -832,6 +852,9 @@ export const ReportsView: React.FC = () => {
                             Retorno
                           </span>
                         )}
+                      </td>
+                      <td className="py-3 px-3 text-slate-600 whitespace-nowrap font-mono text-[11px]">
+                        {regDate}
                       </td>
                       <td className="py-3 px-3 text-slate-600 whitespace-nowrap">
                         {formatDateBR(p.birthDate)} {age !== null ? `(${age}a)` : ''}

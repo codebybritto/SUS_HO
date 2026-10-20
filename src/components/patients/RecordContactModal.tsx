@@ -65,10 +65,6 @@ export const RecordContactModal: React.FC<RecordContactModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!notes.trim()) {
-      setErrorMsg('Por favor, informe uma observação sobre a tentativa de contato realizada.');
-      return;
-    }
 
     recordContactAttempt(patient.id, {
       date,
@@ -259,15 +255,14 @@ export const RecordContactModal: React.FC<RecordContactModalProps> = ({
           {/* Observações */}
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">
-              Observações / Detalhes da Tentativa *
+              Observações / Detalhes da Tentativa
             </label>
             <textarea
               rows={3}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Descreva o que ocorreu (ex: número chamou 5 vezes sem resposta; deixado recado com nora Maria; paciente confirmou data...)"
+              placeholder="Descreva o que ocorreu (opcional)..."
               className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-teal-500"
-              required
             />
           </div>
 

@@ -818,7 +818,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ];
 
         let updatedStatus = pat.currentStatus;
-        let timelineDesc = `Evolução/Tratativa registrada: ${normalizedSituation}. ${notes}`;
+        let timelineDesc = notes
+          ? `Evolução/Tratativa registrada: ${normalizedSituation}. ${notes}`
+          : `Evolução/Tratativa registrada: ${normalizedSituation}.`;
 
         if (recognizedStatuses.includes(normalizedSituation as PatientStatus)) {
           updatedStatus = (normalizedSituation === 'Micrologos'
@@ -829,9 +831,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const dateStr = formatDateBR(complementaryInfo.scheduledDate);
             const timeStr = complementaryInfo.scheduledTime ? ` às ${complementaryInfo.scheduledTime}` : '';
             const locStr = complementaryInfo.scheduledLocation ? ` no local ${complementaryInfo.scheduledLocation}` : '';
-            timelineDesc = `Agendamento marcado para ${dateStr}${timeStr}${locStr}. Obs: ${notes}`;
+            timelineDesc = notes
+              ? `Agendamento marcado para ${dateStr}${timeStr}${locStr}. Obs: ${notes}`
+              : `Agendamento marcado para ${dateStr}${timeStr}${locStr}.`;
           } else {
-            timelineDesc = `Evolução: Situação alterada para "${updatedStatus}". Obs: ${notes}`;
+            timelineDesc = notes
+              ? `Evolução: Situação alterada para "${updatedStatus}". Obs: ${notes}`
+              : `Evolução: Situação alterada para "${updatedStatus}".`;
           }
         }
 
