@@ -101,6 +101,7 @@ export default async function handler(req: any, res: any) {
       const users = (profs || []).map((p: any) => {
         const authUser = authMap[p.id];
         const mustChange = Boolean(
+          p.permissions?.must_change_password ||
           p.must_change_password ||
           authUser?.user_metadata?.must_change_password ||
           authUser?.user_metadata?.force_change_password
@@ -233,6 +234,11 @@ export default async function handler(req: any, res: any) {
       }
 
       const { data: targetUser } = await adminClient.auth.admin.getUserById(id);
+      if (targetUser?.user?.user_metadata?.login === 'master.admin' || targetUser?.user?.email === 'master.admin@gestao.saude.rj.gov.br') {
+        if (password) {
+          return sendJson(403, { error: 'A senha do Administrador Master é permanente e não pode ser alterada.' });
+        }
+      }
       const currentMeta = targetUser?.user?.user_metadata || {};
 
       // Update auth user if password or metadata changed
@@ -313,6 +319,11 @@ export default async function handler(req: any, res: any) {
         return sendJson(400, { error: 'Você não pode excluir sua própria conta de administrador.' });
       }
 
+      const { data: userToDelete } = await adminClient.auth.admin.getUserById(userId);
+      if (userToDelete?.user?.user_metadata?.login === 'master.admin' || userToDelete?.user?.email === 'master.admin@gestao.saude.rj.gov.br') {
+        return sendJson(403, { error: 'A conta do Administrador Master é permanente e não pode ser excluída.' });
+      }
+
       // Delete from auth.users (cascades to profiles)
       const { error: delAuthErr } = await adminClient.auth.admin.deleteUser(userId);
       if (delAuthErr) {
@@ -343,6 +354,9 @@ export default async function handler(req: any, res: any) {
       if (getErr || !targetUser?.user) {
         return sendJson(404, { error: `Usuário não localizado no Supabase Auth: ${getErr?.message || id}` });
       }
+      if (targetUser?.user?.user_metadata?.login === 'master.admin' || targetUser?.user?.email === 'master.admin@gestao.saude.rj.gov.br') {
+        return sendJson(403, { error: 'O Administrador Master possui credenciais protegidas e não pode ter sua senha redefinida.' });
+      }
       const currentMeta = targetUser?.user?.user_metadata || {};
 
       const { error: resetErr } = await adminClient.auth.admin.updateUserById(id, {
@@ -357,8 +371,21 @@ export default async function handler(req: any, res: any) {
         return sendJson(500, { error: `Erro ao redefinir senha no Supabase Auth: ${resetErr.message}` });
       }
 
+      // 1. Atualiza flag no system_users
       try {
         await adminClient.from('system_users').update({ must_change_password: shouldForce }).eq('id', id);
+      } catch {}
+
+      // 2. Atualiza flag nas permissões do profile (garante leitura por RLS)
+      try {
+        const { data: prof } = await adminClient.from('profiles').select('permissions').eq('id', id).single();
+        const currentPerms = prof?.permissions || {};
+        await adminClient.from('profiles').update({
+          permissions: {
+            ...currentPerms,
+            must_change_password: shouldForce,
+          },
+        }).eq('id', id);
       } catch {}
 
       return sendJson(200, { success: true, message: 'Senha redefinida com sucesso no Supabase Auth.' });

@@ -72,16 +72,13 @@ export const buildUserFromAuthAndProfile = (authUser: any, profile?: any): User 
   const unitIds: string[] =
     profile?.unit_ids || authUser.user_metadata?.unit_ids || ['unit-lagos', 'unit-sjm', 'unit-mage'];
 
-  let mustChange = false;
-  if (typeof authUser?.user_metadata?.must_change_password === 'boolean') {
-    mustChange = authUser.user_metadata.must_change_password;
-  } else if (typeof authUser?.user_metadata?.force_change_password === 'boolean') {
-    mustChange = authUser.user_metadata.force_change_password;
-  } else if (typeof profile?.mustChangePassword === 'boolean') {
-    mustChange = profile.mustChangePassword;
-  } else if (typeof profile?.must_change_password === 'boolean') {
-    mustChange = profile.must_change_password;
-  }
+  const mustChange = Boolean(
+    profile?.permissions?.must_change_password === true ||
+    profile?.mustChangePassword === true ||
+    profile?.must_change_password === true ||
+    authUser?.user_metadata?.must_change_password === true ||
+    authUser?.user_metadata?.force_change_password === true
+  );
 
   return {
     id: authUser.id,
@@ -297,7 +294,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const authenticatedUser = buildUserFromAuthAndProfile(data.user, profile);
-      if (data.user?.user_metadata?.must_change_password) {
+      if (
+        data.user?.user_metadata?.must_change_password ||
+        data.user?.user_metadata?.force_change_password ||
+        profile?.permissions?.must_change_password ||
+        profile?.mustChangePassword ||
+        profile?.must_change_password
+      ) {
         authenticatedUser.mustChangePassword = true;
       }
       setCurrentUser(authenticatedUser);
@@ -390,6 +393,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       try {
         await supabase.from('system_users').update({ must_change_password: false }).eq('id', currentUser.id);
+      } catch {}
+
+      try {
+        const { data: prof } = await supabase.from('profiles').select('permissions').eq('id', currentUser.id).single();
+        if (prof?.permissions && typeof prof.permissions === 'object') {
+          const newPerms = { ...prof.permissions };
+          delete newPerms.must_change_password;
+          await supabase.from('profiles').update({ permissions: newPerms }).eq('id', currentUser.id);
+        }
       } catch {}
 
       clearMustChangePasswordFlag();

@@ -413,7 +413,7 @@ export const supabaseService = {
           email: r.email,
           createdAt: r.created_at,
           lastLoginAt: undefined,
-          mustChangePassword: Boolean(r.must_change_password || suMap[r.id]),
+          mustChangePassword: Boolean(r.permissions?.must_change_password || r.must_change_password || suMap[r.id]),
         }));
       }
     } catch {
@@ -437,7 +437,7 @@ export const supabaseService = {
       email: r.email,
       createdAt: r.created_at,
       lastLoginAt: r.last_login_at,
-      mustChangePassword: Boolean(r.must_change_password),
+      mustChangePassword: Boolean(r.permissions?.must_change_password || r.must_change_password),
     }));
   },
 
@@ -446,7 +446,7 @@ export const supabaseService = {
     try {
       const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
       if (!error && data) {
-        let mustChange = Boolean(data.must_change_password);
+        let mustChange = Boolean(data.permissions?.must_change_password || data.must_change_password);
         if (!mustChange) {
           try {
             const { data: su } = await supabase.from('system_users').select('must_change_password').eq('id', userId).maybeSingle();
@@ -719,6 +719,13 @@ export const supabaseService = {
         try {
           await supabase.from('system_users').update({ must_change_password: forceChangeOnNextLogin }).eq('id', userId);
         } catch {}
+        try {
+          const { data: prof } = await supabase.from('profiles').select('permissions').eq('id', userId).single();
+          const currentPerms = prof?.permissions || {};
+          await supabase.from('profiles').update({
+            permissions: { ...currentPerms, must_change_password: forceChangeOnNextLogin },
+          }).eq('id', userId);
+        } catch {}
         return true;
       } else {
         const errJson = await res.json().catch(() => null);
@@ -755,6 +762,13 @@ export const supabaseService = {
       if (!rpcErr && rpcData) {
         try {
           await supabase.from('system_users').update({ must_change_password: forceChangeOnNextLogin }).eq('id', userId);
+        } catch {}
+        try {
+          const { data: prof } = await supabase.from('profiles').select('permissions').eq('id', userId).single();
+          const currentPerms = prof?.permissions || {};
+          await supabase.from('profiles').update({
+            permissions: { ...currentPerms, must_change_password: forceChangeOnNextLogin },
+          }).eq('id', userId);
         } catch {}
         return true;
       }

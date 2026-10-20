@@ -235,6 +235,7 @@ export const AdminView: React.FC = () => {
                     <tbody className="divide-y divide-slate-100">
                       {users.map((u) => {
                         const userUnits = units.filter((unit) => u.unitIds.includes(unit.id));
+                        const isMasterAdmin = u.login === 'master.admin';
                         return (
                           <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
                             <td className="py-2.5 px-3">
@@ -248,7 +249,12 @@ export const AdminView: React.FC = () => {
                             <td className="py-2.5 px-3 font-mono font-medium text-slate-700">
                               <div className="flex items-center gap-1.5">
                                 <span>{u.login}</span>
-                                {u.mustChangePassword && (
+                                {isMasterAdmin && (
+                                  <span className="text-[9px] bg-indigo-100 text-indigo-800 border border-indigo-300 px-1.5 py-0.2 rounded font-sans font-bold flex items-center gap-1" title="Administrador Master com credenciais imutáveis e permanentes">
+                                    <Shield className="w-2.5 h-2.5 inline" /> Master TI
+                                  </span>
+                                )}
+                                {u.mustChangePassword && !isMasterAdmin && (
                                   <span className="text-[9px] bg-amber-100 text-amber-800 border border-amber-300 px-1.5 py-0.2 rounded font-sans font-bold" title="Usuário precisará cadastrar nova senha no próximo acesso">
                                     Troca Pendente
                                   </span>
@@ -292,44 +298,50 @@ export const AdminView: React.FC = () => {
                               </span>
                             </td>
                             <td className="py-2.5 px-3 text-right">
-                              <div className="flex items-center justify-end gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setUserForPasswordReset(u);
-                                    setIsResetPasswordModalOpen(true);
-                                  }}
-                                  className="p-1 text-slate-500 hover:text-amber-600 hover:bg-slate-100 rounded"
-                                  title="Resetar / Redefinir Senha do Usuário"
-                                >
-                                  <Key className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingUser(u);
-                                    setIsUserModalOpen(true);
-                                  }}
-                                  className="p-1 text-slate-500 hover:text-cyan-700 hover:bg-slate-100 rounded"
-                                  title="Editar Usuário e Permissões"
-                                >
-                                  <Edit className="w-3.5 h-3.5" />
-                                </button>
-                                {u.id !== currentUser?.id && (
+                              {isMasterAdmin ? (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full" title="Conta com credenciais imutáveis e permanentes protegida por segurança">
+                                  <Shield className="w-3 h-3 text-indigo-600" /> Master TI (Imutável)
+                                </span>
+                              ) : (
+                                <div className="flex items-center justify-end gap-1">
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      if (window.confirm(`Deseja realmente excluir o usuário ${u.name}?`)) {
-                                        deleteUser(u.id);
-                                      }
+                                      setUserForPasswordReset(u);
+                                      setIsResetPasswordModalOpen(true);
                                     }}
-                                    className="p-1 text-slate-400 hover:text-rose-600 hover:bg-slate-100 rounded"
-                                    title="Excluir Usuário"
+                                    className="p-1 text-slate-500 hover:text-amber-600 hover:bg-slate-100 rounded"
+                                    title="Resetar / Redefinir Senha do Usuário"
                                   >
-                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <Key className="w-3.5 h-3.5" />
                                   </button>
-                                )}
-                              </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingUser(u);
+                                      setIsUserModalOpen(true);
+                                    }}
+                                    className="p-1 text-slate-500 hover:text-cyan-700 hover:bg-slate-100 rounded"
+                                    title="Editar Usuário e Permissões"
+                                  >
+                                    <Edit className="w-3.5 h-3.5" />
+                                  </button>
+                                  {u.id !== currentUser?.id && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (window.confirm(`Deseja realmente excluir o usuário ${u.name}?`)) {
+                                          deleteUser(u.id);
+                                        }
+                                      }}
+                                      className="p-1 text-slate-400 hover:text-rose-600 hover:bg-slate-100 rounded"
+                                      title="Excluir Usuário"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                </div>
+                              )}
                             </td>
                           </tr>
                         );
@@ -919,6 +931,10 @@ const UserModal: React.FC<{
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (user?.login === 'master.admin') {
+      alert('A conta do Administrador Master é permanente e protegida. Suas credenciais não podem ser alteradas.');
+      return;
+    }
     if (!name.trim() || !login.trim()) {
       alert('Nome e Login são campos obrigatórios.');
       return;
@@ -1599,6 +1615,10 @@ const ResetUserPasswordModal: React.FC<{
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (user.login === 'master.admin') {
+      setFeedback({ type: 'error', text: 'O Administrador Master possui credenciais protegidas e permanentes.' });
+      return;
+    }
     const cleanPass = newPassword.trim();
     if (!cleanPass || cleanPass.length < 6) {
       setFeedback({ type: 'error', text: 'A nova senha deve possuir no mínimo 6 caracteres.' });
