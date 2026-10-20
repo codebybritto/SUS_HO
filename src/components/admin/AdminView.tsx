@@ -850,13 +850,16 @@ export const AdminView: React.FC = () => {
             setUserForPasswordReset(null);
           }}
           onReset={async (userId, newPass, forceChange) => {
-            const success = await adminResetPassword(userId, newPass, forceChange);
-            if (success) {
-              await reloadFromSupabase();
-              setIsResetPasswordModalOpen(false);
-              setUserForPasswordReset(null);
+            try {
+              const success = await adminResetPassword(userId, newPass, forceChange);
+              if (success) {
+                reloadFromSupabase().catch(console.warn);
+              }
+              return success;
+            } catch (err: any) {
+              console.error('Erro na redefinição de senha:', err);
+              throw err;
             }
-            return success;
           }}
         />
       )}
@@ -1596,23 +1599,29 @@ const ResetUserPasswordModal: React.FC<{
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPassword.trim() || newPassword.length < 4) {
-      setFeedback({ type: 'error', text: 'A senha deve conter no mínimo 4 caracteres.' });
+    const cleanPass = newPassword.trim();
+    if (!cleanPass || cleanPass.length < 6) {
+      setFeedback({ type: 'error', text: 'A nova senha deve possuir no mínimo 6 caracteres.' });
       return;
     }
 
     setIsSubmitting(true);
     setFeedback(null);
-    const ok = await onReset(user.id, newPassword.trim(), forceChange);
-    setIsSubmitting(false);
-
-    if (ok) {
-      setFeedback({ type: 'success', text: `Senha redefinida com sucesso para o usuário ${user.name}!` });
-      setTimeout(() => {
-        onClose();
-      }, 1500);
-    } else {
-      setFeedback({ type: 'error', text: 'Falha ao redefinir a senha.' });
+    try {
+      const ok = await onReset(user.id, cleanPass, forceChange);
+      if (ok) {
+        setFeedback({ type: 'success', text: `Senha redefinida com sucesso para o usuário ${user.name}!` });
+        setTimeout(() => {
+          onClose();
+        }, 1200);
+      } else {
+        setFeedback({ type: 'error', text: 'Não foi possível redefinir a senha. Tente novamente.' });
+      }
+    } catch (err: any) {
+      console.error('Erro ao redefinir senha no modal:', err);
+      setFeedback({ type: 'error', text: err?.message || 'Falha ao redefinir a senha no servidor.' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

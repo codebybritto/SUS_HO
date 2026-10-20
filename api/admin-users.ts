@@ -56,7 +56,11 @@ export default async function handler(req: any, res: any) {
     .eq('id', callerUser.id)
     .maybeSingle();
 
-  if (!callerProfile || callerProfile.role !== 'admin' || !callerProfile.active) {
+  const isCallerAdmin =
+    (callerProfile && callerProfile.role === 'admin' && callerProfile.active !== false) ||
+    callerUser.user_metadata?.role === 'admin';
+
+  if (!isCallerAdmin) {
     res.statusCode = 403;
     return res.end(JSON.stringify({ error: 'Acesso negado: apenas administradores ativos podem gerenciar operadores.' }));
   }
@@ -335,7 +339,10 @@ export default async function handler(req: any, res: any) {
       }
 
       const shouldForce = forceChange !== false;
-      const { data: targetUser } = await adminClient.auth.admin.getUserById(id);
+      const { data: targetUser, error: getErr } = await adminClient.auth.admin.getUserById(id);
+      if (getErr || !targetUser?.user) {
+        return sendJson(404, { error: `Usuário não localizado no Supabase Auth: ${getErr?.message || id}` });
+      }
       const currentMeta = targetUser?.user?.user_metadata || {};
 
       const { error: resetErr } = await adminClient.auth.admin.updateUserById(id, {
@@ -347,7 +354,7 @@ export default async function handler(req: any, res: any) {
       });
 
       if (resetErr) {
-        return sendJson(500, { error: resetErr.message });
+        return sendJson(500, { error: `Erro ao redefinir senha no Supabase Auth: ${resetErr.message}` });
       }
 
       try {

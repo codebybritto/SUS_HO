@@ -690,20 +690,30 @@ export const supabaseService = {
     forceChangeOnNextLogin: boolean = true
   ): Promise<boolean> {
     if (!supabase || !isSupabaseConfigured() || !userId || !newPassword) return false;
+    const cleanPassword = String(newPassword).trim();
+    if (cleanPassword.length < 6) {
+      throw new Error('A nova senha deve possuir no mínimo 6 caracteres.');
+    }
 
     const session = (await supabase.auth.getSession()).data.session;
     const token = session?.access_token;
 
-    // 1. Tenta via API Serverless
+    // 1. Tenta via API Serverless / Dev Middleware (com timeout preventivo de 3.5 segundos)
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+
       const res = await fetch('/api/admin-users', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ id: userId, newPassword, forceChange: forceChangeOnNextLogin }),
+        body: JSON.stringify({ id: userId, newPassword: cleanPassword, forceChange: forceChangeOnNextLogin }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (res.ok) {
         try {
@@ -712,43 +722,48 @@ export const supabaseService = {
         return true;
       } else {
         const errJson = await res.json().catch(() => null);
-        if (errJson?.error) {
-          throw new Error(errJson.error);
-        }
+        console.warn('Endpoint /api/admin-users retornou erro:', errJson?.error || res.status);
       }
-    } catch (err: any) {
-      if (err.message && !err.message.includes('fetch') && !err.message.includes('Failed')) {
-        throw err;
-      }
+    } catch (fetchErr: any) {
+      console.warn('Falha na comunicação com /api/admin-users, ativando fallback direto Supabase:', fetchErr?.message);
     }
 
     // 2. Se for o próprio usuário logado, atualiza via cliente direto de autenticação
     if (session?.user?.id === userId) {
-      const { error: selfErr } = await supabase.auth.updateUser({
-        password: newPassword,
-        data: { must_change_password: forceChangeOnNextLogin },
-      });
-      if (!selfErr) {
-        try {
-          await supabase.from('system_users').update({ must_change_password: forceChangeOnNextLogin }).eq('id', userId);
-        } catch {}
-        return true;
+      try {
+        const { error: selfErr } = await supabase.auth.updateUser({
+          password: cleanPassword,
+          data: { must_change_password: forceChangeOnNextLogin },
+        });
+        if (!selfErr) {
+          try {
+            await supabase.from('system_users').update({ must_change_password: forceChangeOnNextLogin }).eq('id', userId);
+          } catch {}
+          return true;
+        }
+      } catch (selfCatch) {
+        console.warn('Erro ao atualizar senha via sessão ativa:', selfCatch);
       }
     }
 
-    // 3. Fallback via RPC admin_reset_user_password
+    // 3. Fallback Direto via PostgreSQL RPC 'admin_reset_user_password' (executado no banco Supabase)
     try {
-      const { error: rpcErr } = await supabase.rpc('admin_reset_user_password', {
+      const { data: rpcData, error: rpcErr } = await supabase.rpc('admin_reset_user_password', {
         target_user_id: userId,
-        new_password: newPassword,
+        new_password: cleanPassword,
       });
-      if (!rpcErr) {
+      if (!rpcErr && rpcData) {
         try {
           await supabase.from('system_users').update({ must_change_password: forceChangeOnNextLogin }).eq('id', userId);
         } catch {}
         return true;
       }
-    } catch {}
+      if (rpcErr) {
+        console.warn('RPC admin_reset_user_password retornou erro:', rpcErr.message);
+      }
+    } catch (rpcCatch: any) {
+      console.warn('Erro ao invocar RPC admin_reset_user_password:', rpcCatch);
+    }
 
     return false;
   },
