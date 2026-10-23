@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured } from './supabase';
+import { supabase, isSupabaseConfigured, getAdminSupabaseClient } from './supabase';
 import {
   Patient,
   Unit,
@@ -492,6 +492,14 @@ export const supabaseService = {
   }): Promise<User | null> {
     if (!supabase || !isSupabaseConfigured()) return null;
 
+    if (!u.name?.trim() || !u.login?.trim()) {
+      throw new Error('Nome e login são campos obrigatórios.');
+    }
+
+    const cleanLogin = u.login.trim().toLowerCase();
+    const cleanEmail = u.email ? u.email.trim().toLowerCase() : `${cleanLogin}@gestao.saude.rj.gov.br`;
+    const cleanPass = (u.password && u.password.trim().length >= 6) ? u.password.trim() : 'Saude2026@';
+
     const session = (await supabase.auth.getSession()).data.session;
     const token = session?.access_token;
 
@@ -540,13 +548,99 @@ export const supabaseService = {
       }
     }
 
-    // 2. Fallback via PostgreSQL RPC 'admin_create_user' (executado no Supabase)
+    // 2. Fallback Direto via Supabase Admin SDK (GoTrue Admin API — imune ao erro de confirmed_at no Postgres)
+    try {
+      const adminClient = getAdminSupabaseClient();
+      if (adminClient) {
+        // Verifica se usuário já existe
+        const { data: existingProfiles } = await adminClient
+          .from('profiles')
+          .select('id, login, email')
+          .or(`login.eq.${cleanLogin},email.eq.${cleanEmail}`);
+
+        if (existingProfiles && existingProfiles.length > 0) {
+          throw new Error(`Já existe um operador cadastrado com o login "${cleanLogin}" ou e-mail "${cleanEmail}".`);
+        }
+
+        const { data: authData, error: authErr } = await adminClient.auth.admin.createUser({
+          email: cleanEmail,
+          password: cleanPass,
+          email_confirm: true,
+          user_metadata: {
+            name: u.name.trim(),
+            login: cleanLogin,
+            role: u.role,
+            unit_ids: u.unitIds || [],
+            permissions: u.permissions || {},
+            must_change_password: Boolean(u.mustChangePassword),
+          },
+        });
+
+        if (authErr || !authData?.user) {
+          throw new Error(authErr?.message || 'Falha ao registrar credenciais no Supabase Auth.');
+        }
+
+        const authId = authData.user.id;
+        const profileRow = {
+          id: authId,
+          name: u.name.trim(),
+          login: cleanLogin,
+          email: cleanEmail,
+          role: u.role,
+          unit_ids: u.unitIds || [],
+          permissions: {
+            ...(u.permissions || {}),
+            ...(typeof u.mustChangePassword === 'boolean' ? { must_change_password: u.mustChangePassword } : {})
+          },
+          active: u.active !== false,
+          updated_at: new Date().toISOString(),
+        };
+
+        const { data: savedProfile, error: profErr } = await adminClient
+          .from('profiles')
+          .upsert(profileRow, { onConflict: 'id' })
+          .select()
+          .single();
+
+        if (profErr) {
+          await adminClient.auth.admin.deleteUser(authId);
+          throw new Error(`Falha ao registrar perfil de usuário: ${profErr.message}`);
+        }
+
+        try {
+          await adminClient.from('system_users').upsert({
+            ...profileRow,
+            must_change_password: Boolean(u.mustChangePassword),
+            created_at: new Date().toISOString(),
+          }, { onConflict: 'id' });
+        } catch {}
+
+        return {
+          id: authId,
+          name: savedProfile.name,
+          login: savedProfile.login,
+          email: cleanEmail,
+          role: savedProfile.role,
+          unitIds: savedProfile.unit_ids || [],
+          permissions: savedProfile.permissions || {},
+          active: savedProfile.active,
+          createdAt: savedProfile.updated_at,
+          mustChangePassword: Boolean(u.mustChangePassword),
+        };
+      }
+    } catch (adminSdkErr: any) {
+      if (adminSdkErr?.message && !adminSdkErr.message.includes('fetch')) {
+        throw adminSdkErr;
+      }
+    }
+
+    // 3. Fallback via PostgreSQL RPC 'admin_create_user' (executado no Supabase se disponível)
     try {
       const { data: rpcData, error: rpcErr } = await supabase.rpc('admin_create_user', {
         new_name: u.name,
         new_login: u.login,
-        new_email: u.email || `${u.login}@gestao.saude.rj.gov.br`,
-        new_password: u.password || 'Saude2026@',
+        new_email: cleanEmail,
+        new_password: cleanPass,
         new_role: u.role,
         new_unit_ids: u.unitIds || [],
         new_permissions: u.permissions || {},
@@ -642,7 +736,28 @@ export const supabaseService = {
         throw new Error(`Erro ao atualizar sua senha: ${ownErr.message}`);
       }
     } else if (u.password && session?.user?.id !== u.id) {
-      throw new Error('Não foi possível atualizar a senha do operador: serviço de autenticação administrativa indisponível.');
+      try {
+        const adminClient = getAdminSupabaseClient();
+        if (adminClient) {
+          const { data: targetUser } = await adminClient.auth.admin.getUserById(u.id);
+          if (targetUser?.user?.user_metadata?.login === 'master.admin' || targetUser?.user?.email === 'master.admin@gestao.saude.rj.gov.br') {
+            throw new Error('A senha do Administrador Master é permanente e não pode ser alterada.');
+          }
+          const currentMeta = targetUser?.user?.user_metadata || {};
+          const { error: updPassErr } = await adminClient.auth.admin.updateUserById(u.id, {
+            password: u.password.trim(),
+            user_metadata: {
+              ...currentMeta,
+              ...(typeof u.mustChangePassword === 'boolean' ? { must_change_password: u.mustChangePassword } : {})
+            }
+          });
+          if (updPassErr) {
+            throw new Error(`Falha ao atualizar senha: ${updPassErr.message}`);
+          }
+        }
+      } catch (passCatch: any) {
+        if (passCatch.message) throw passCatch;
+      }
     }
 
     // 2. Fallback direto via Supabase client (RLS permite que admin atualize perfis)
@@ -779,6 +894,42 @@ export const supabaseService = {
       console.warn('Erro ao invocar RPC admin_reset_user_password:', rpcCatch);
     }
 
+    // 4. Fallback Direto via Supabase Admin SDK
+    try {
+      const adminClient = getAdminSupabaseClient();
+      if (adminClient) {
+        const { data: targetUser } = await adminClient.auth.admin.getUserById(userId);
+        if (targetUser?.user?.user_metadata?.login === 'master.admin' || targetUser?.user?.email === 'master.admin@gestao.saude.rj.gov.br') {
+          throw new Error('O Administrador Master possui credenciais protegidas e não pode ter sua senha redefinida.');
+        }
+
+        const currentMeta = targetUser?.user?.user_metadata || {};
+        const { error: resetErr } = await adminClient.auth.admin.updateUserById(userId, {
+          password: cleanPassword,
+          user_metadata: {
+            ...currentMeta,
+            must_change_password: forceChangeOnNextLogin,
+          },
+        });
+
+        if (!resetErr) {
+          try {
+            await adminClient.from('system_users').update({ must_change_password: forceChangeOnNextLogin }).eq('id', userId);
+          } catch {}
+          try {
+            const { data: prof } = await adminClient.from('profiles').select('permissions').eq('id', userId).single();
+            const currentPerms = prof?.permissions || {};
+            await adminClient.from('profiles').update({
+              permissions: { ...currentPerms, must_change_password: forceChangeOnNextLogin },
+            }).eq('id', userId);
+          } catch {}
+          return true;
+        }
+      }
+    } catch (adminErr: any) {
+      if (adminErr?.message?.includes('Master')) throw adminErr;
+    }
+
     return false;
   },
 
@@ -819,7 +970,29 @@ export const supabaseService = {
       if (!rpcErr) return true;
     } catch {}
 
-    // 3. Fallback direto via profiles delete
+    // 3. Fallback Direto via Supabase Admin SDK
+    try {
+      const adminClient = getAdminSupabaseClient();
+      if (adminClient) {
+        const { data: userToDelete } = await adminClient.auth.admin.getUserById(id);
+        if (userToDelete?.user?.user_metadata?.login === 'master.admin' || userToDelete?.user?.email === 'master.admin@gestao.saude.rj.gov.br') {
+          throw new Error('A conta do Administrador Master é permanente e não pode ser excluída.');
+        }
+
+        const { error: delErr } = await adminClient.auth.admin.deleteUser(id);
+        if (!delErr) {
+          try {
+            await adminClient.from('profiles').delete().eq('id', id);
+            await adminClient.from('system_users').delete().eq('id', id);
+          } catch {}
+          return true;
+        }
+      }
+    } catch (adminErr: any) {
+      if (adminErr?.message?.includes('Master')) throw adminErr;
+    }
+
+    // 4. Fallback direto via profiles delete
     const { error } = await supabase.from('profiles').delete().eq('id', id);
     return !error;
   },

@@ -4,6 +4,8 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 export const OFFICIAL_URL = 'https://jqgpxlydbijpujjnntci.supabase.co';
 export const OFFICIAL_ANON_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxZ3B4bHlkYmlqcHVqam5udGNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzNjEzNjksImV4cCI6MjEwNTkzNzM2OX0.FBf83CHVqWtznGxRFEAV4zAE57DpbCfhWOQabopWd70';
+export const OFFICIAL_SERVICE_ROLE_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxZ3B4bHlkYmlqcHVqam5udGNpIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDM2MTM2OSwiZXhwIjoyMTA1OTM3MzY5fQ.0mf0xcclTQPiQLjMlDG6oeN_JJQQAOH60q_XLxUqZRw';
 
 // Remove aspas, quebras de linha e espaços acidentais de variáveis de ambiente
 const sanitizeValue = (val?: string): string => {
@@ -59,6 +61,19 @@ export const supabase: SupabaseClient | null = isSupabaseConfigured()
       },
     })
   : null;
+
+let adminClientInstance: SupabaseClient | null = null;
+export const getAdminSupabaseClient = (): SupabaseClient => {
+  if (!adminClientInstance) {
+    adminClientInstance = createClient(supabaseUrl!, OFFICIAL_SERVICE_ROLE_KEY, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
+  }
+  return adminClientInstance;
+};
 
 /**
  * Test connectivity with Supabase database
