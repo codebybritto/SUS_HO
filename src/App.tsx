@@ -266,7 +266,11 @@ const MainAppContent: React.FC = () => {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+      <main
+        className={`flex-1 w-full mx-auto p-3 sm:p-5 lg:p-6 ${
+          currentTab === 'reports' ? 'max-w-[1720px]' : 'max-w-7xl'
+        }`}
+      >
         {currentTab === 'dashboard' && (
           <DashboardView
             onSelectPatient={handleSelectPatient}

@@ -937,20 +937,20 @@ export const ReportsView: React.FC = () => {
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
-            <thead className="bg-slate-900 text-white font-semibold uppercase tracking-wider text-[11px]">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-xs text-left border-collapse">
+            <thead className="bg-slate-900 text-white font-semibold uppercase tracking-wider text-[10px]">
               <tr>
-                <th className="py-3 px-3 text-center w-10 whitespace-nowrap">#</th>
-                <th className="py-3 px-4 whitespace-nowrap">Nome do Paciente</th>
-                <th className="py-3 px-3 whitespace-nowrap">Data Cadastro</th>
-                <th className="py-3 px-3 whitespace-nowrap">Nascimento (Idade)</th>
-                <th className="py-3 px-3 min-w-[240px]">Procedimento(s) Solicitado(s)</th>
-                <th className="py-3 px-3 whitespace-nowrap">Município</th>
-                <th className="py-3 px-3 whitespace-nowrap">Médico</th>
-                <th className="py-3 px-3 whitespace-nowrap">Data Solicitada</th>
-                <th className="py-3 px-3 text-center whitespace-nowrap">Status</th>
-                <th className="py-3 px-3 text-center whitespace-nowrap">Urgente</th>
+                <th className="py-2.5 px-2 text-center w-8 whitespace-nowrap">#</th>
+                <th className="py-2.5 px-2 w-[15%] min-w-[130px] whitespace-nowrap">Nome do Paciente</th>
+                <th className="py-2.5 px-1.5 w-[75px] text-center whitespace-nowrap">Data Cad.</th>
+                <th className="py-2.5 px-1.5 w-[85px] text-center whitespace-nowrap">Nasc. (Idade)</th>
+                <th className="py-2.5 px-2 min-w-[200px]">Procedimento(s) Solicitado(s)</th>
+                <th className="py-2.5 px-2 w-[11%] min-w-[95px] whitespace-nowrap">Município</th>
+                <th className="py-2.5 px-2 w-[12%] min-w-[100px] whitespace-nowrap">Médico</th>
+                <th className="py-2.5 px-1.5 w-[75px] text-center whitespace-nowrap">Data Solic.</th>
+                <th className="py-2.5 px-1.5 w-[105px] text-center whitespace-nowrap">Status</th>
+                <th className="py-2.5 px-1 w-[48px] text-center whitespace-nowrap">Urgente</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
@@ -968,65 +968,72 @@ export const ReportsView: React.FC = () => {
                   const displayProcs = getPatientDisplayProcedures(p);
 
                   return (
-                    <tr key={p.id} className="hover:bg-slate-50 transition-colors align-middle">
-                      <td className="py-3 px-3 text-center text-slate-500 font-bold font-mono whitespace-nowrap">
+                    <tr key={p.id} className="hover:bg-slate-50 transition-colors align-middle text-[11px]">
+                      <td className="py-2 px-2 text-center text-slate-500 font-bold font-mono text-[10px] whitespace-nowrap">
                         {idx + 1}
                       </td>
-                      <td className="py-3 px-4 font-semibold text-slate-900 whitespace-nowrap">
-                        {p.name}
+                      <td className="py-2 px-2 min-w-[130px] max-w-[180px]">
+                        <div className="font-semibold text-slate-900 truncate" title={p.name}>
+                          {p.name}
+                        </div>
                         {(p.hasFollowup || displayProcs.some((pr) => pr.hasFollowup || pr.followupDate)) && (
-                          <span className="ml-1.5 px-1.5 py-0.2 bg-cyan-100 text-cyan-800 text-[10px] font-bold rounded whitespace-nowrap">
+                          <span className="inline-block px-1.5 py-0.2 bg-cyan-100 text-cyan-800 text-[9px] font-bold rounded whitespace-nowrap">
                             Retorno
                           </span>
                         )}
                       </td>
-                      <td className="py-3 px-3 text-slate-600 whitespace-nowrap font-mono text-[11px]">
+                      <td className="py-2 px-1.5 text-center text-slate-600 font-mono text-[10px] whitespace-nowrap">
                         {regDate}
                       </td>
-                      <td className="py-3 px-3 text-slate-600 whitespace-nowrap">
+                      <td className="py-2 px-1.5 text-center text-slate-600 text-[10px] whitespace-nowrap">
                         {formatDateBR(p.birthDate)} {age !== null ? `(${age}a)` : ''}
                       </td>
-                      <td className="py-3 px-3 min-w-[240px] max-w-md">
-                        <div className="leading-relaxed">
+                      <td className="py-2 px-2 min-w-[200px]">
+                        <div className="text-[11px] text-slate-800 leading-snug">
                           {displayProcs.map((pr, i) => (
-                            <span key={pr.id} className="inline-block mr-2 my-0.5">
-                              <span className="font-medium text-slate-800">{pr.procedureName}</span>
-                              <span className="ml-1 px-1.5 py-0.2 rounded font-mono text-[10px] bg-slate-100 text-slate-700 font-bold border border-slate-300 whitespace-nowrap">
+                            <span key={pr.id} className="inline">
+                              <span className="font-medium text-slate-800">{pr.procedureName}</span>{' '}
+                              <span className="text-[9.5px] font-bold text-cyan-800 bg-cyan-50 border border-cyan-200 px-1 py-0.2 rounded whitespace-nowrap">
                                 {pr.eyeSide}
                               </span>
                               {pr.followupDate && (
-                                <span className="ml-1 px-1.5 py-0.2 rounded font-mono text-[10px] bg-amber-100 text-amber-800 font-bold border border-amber-300 whitespace-nowrap">
+                                <span className="ml-1 text-[9.5px] font-bold text-amber-800 bg-amber-50 border border-amber-300 px-1.5 py-0.2 rounded whitespace-nowrap">
                                   Acomp: {formatDateBR(pr.followupDate)}
                                 </span>
                               )}
                               {i < displayProcs.length - 1 && (
-                                <span className="text-slate-400 ml-1.5 font-bold">;</span>
+                                <span className="text-slate-400 font-bold mx-1.5">;</span>
                               )}
                             </span>
                           ))}
                         </div>
                       </td>
-                      <td className="py-3 px-3 text-slate-700 whitespace-nowrap">{p.city}</td>
-                      <td className="py-3 px-3 text-slate-600 whitespace-nowrap truncate max-w-[180px]" title={p.requestingDoctorName || 'Não informado'}>
+                      <td className="py-2 px-2 text-slate-700 min-w-[95px] max-w-[125px] truncate" title={p.city}>
+                        {p.city}
+                      </td>
+                      <td
+                        className="py-2 px-2 text-slate-600 min-w-[100px] max-w-[130px] truncate"
+                        title={p.requestingDoctorName || 'Não informado'}
+                      >
                         {p.requestingDoctorName || 'Não informado'}
                       </td>
-                      <td className="py-3 px-3 text-slate-600 whitespace-nowrap">
+                      <td className="py-2 px-1.5 text-center text-slate-600 font-mono text-[10px] whitespace-nowrap">
                         {formatDateBR(p.requestedDate)}
                       </td>
-                      <td className="py-3 px-3 text-center">
+                      <td className="py-2 px-1.5 text-center whitespace-nowrap">
                         <span
-                          className={`inline-block px-2.5 py-0.5 rounded-full font-bold border text-[10px] whitespace-nowrap ${statusStyle.badgeClass}`}
+                          className={`inline-block px-2 py-0.5 rounded-full font-bold border text-[9.5px] ${statusStyle.badgeClass}`}
                         >
                           {statusStyle.label}
                         </span>
                       </td>
-                      <td className="py-3 px-3 text-center">
+                      <td className="py-2 px-1 text-center whitespace-nowrap">
                         {p.isUrgent ? (
-                          <span className="px-2 py-0.5 rounded font-bold text-[10px] bg-rose-100 text-rose-800 border border-rose-300">
+                          <span className="px-1.5 py-0.5 rounded font-bold text-[9px] bg-rose-100 text-rose-800 border border-rose-300">
                             SIM
                           </span>
                         ) : (
-                          <span className="text-slate-400 font-mono text-[11px]">-</span>
+                          <span className="text-slate-400 font-mono text-[10px]">-</span>
                         )}
                       </td>
                     </tr>
