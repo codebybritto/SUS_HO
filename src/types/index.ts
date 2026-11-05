@@ -181,6 +181,8 @@ export interface PatientProcedureItem {
   codeSigtap?: string;
   eyeSide: EyeSide;
   dateRequested?: string;
+  hasFollowup?: boolean;
+  followupDate?: string;
 }
 
 export interface Patient {

@@ -52,6 +52,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
   const [city, setCity] = useState<string>('');
   const [hasFollowup, setHasFollowup] = useState<boolean>(false);
   const [followupDate, setFollowupDate] = useState<string>('');
+  const [selectedFollowupProcId, setSelectedFollowupProcId] = useState<string>('ALL');
   const [notes, setNotes] = useState<string>('');
   const [currentStatus, setCurrentStatus] = useState<PatientStatus>('Aguardando Contato');
   const [errorMsg, setErrorMsg] = useState<string>('');
@@ -106,6 +107,16 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
       // Populate procedures list
       if (patientToEdit.procedures && patientToEdit.procedures.length > 0) {
         setSelectedProcedures(patientToEdit.procedures);
+        const procWithDate = patientToEdit.procedures.find((pr) => pr.followupDate);
+        if (procWithDate) {
+          setSelectedFollowupProcId(procWithDate.id);
+          if (procWithDate.followupDate && !patientToEdit.followupDate) {
+            setFollowupDate(procWithDate.followupDate);
+            setHasFollowup(true);
+          }
+        } else {
+          setSelectedFollowupProcId('ALL');
+        }
       } else if (patientToEdit.requestedProcedureId) {
         setSelectedProcedures([
           {
@@ -114,10 +125,14 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
             procedureName: patientToEdit.requestedProcedureName,
             eyeSide: patientToEdit.eyeSide || 'AO',
             dateRequested: patientToEdit.requestedDate,
+            hasFollowup: patientToEdit.hasFollowup,
+            followupDate: patientToEdit.followupDate,
           },
         ]);
+        setSelectedFollowupProcId('ALL');
       } else {
         setSelectedProcedures([]);
+        setSelectedFollowupProcId('ALL');
       }
 
       setRequestedDate(patientToEdit.requestedDate);
@@ -137,6 +152,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
       setName('');
       setBirthDate('');
       setSelectedProcedures([]);
+      setSelectedFollowupProcId('ALL');
       setTempProcedureId('');
       setTempEyeSide('AO');
       setRequestedDate(getTodayDateInputValue());
@@ -248,14 +264,27 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
 
     const docObj = doctors.find((d) => d.id === requestingDoctorId);
 
+    const finalProcedures = selectedProcedures.map((pr) => {
+      if (!hasFollowup || !followupDate) {
+        return { ...pr, hasFollowup: false, followupDate: undefined };
+      }
+      if (selectedFollowupProcId === 'ALL') {
+        return { ...pr, hasFollowup: true, followupDate };
+      }
+      if (pr.id === selectedFollowupProcId) {
+        return { ...pr, hasFollowup: true, followupDate };
+      }
+      return { ...pr, hasFollowup: false, followupDate: undefined };
+    });
+
     const payload: Partial<Patient> & { procedures: PatientProcedureItem[] } = {
       name: name.trim(),
       birthDate,
       unitId,
-      procedures: selectedProcedures,
-      requestedProcedureId: selectedProcedures[0].procedureId,
-      requestedProcedureName: selectedProcedures.map((p) => `${p.procedureName} (${p.eyeSide})`).join(', '),
-      eyeSide: selectedProcedures[0].eyeSide,
+      procedures: finalProcedures,
+      requestedProcedureId: finalProcedures[0].procedureId,
+      requestedProcedureName: finalProcedures.map((p) => `${p.procedureName} (${p.eyeSide})`).join(', '),
+      eyeSide: finalProcedures[0].eyeSide,
       requestedDate,
       requestingDoctorId,
       requestingDoctorName: docObj?.name || '',
@@ -428,7 +457,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                     key={item.id}
                     className="flex items-center justify-between bg-white p-2.5 rounded-lg border border-slate-200 text-xs shadow-2xs"
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold text-cyan-700">#{idx + 1}</span>
                       <span className="font-semibold text-slate-800">{item.procedureName}</span>
                       <span className="px-2 py-0.5 rounded font-mono text-[10px] bg-slate-100 text-slate-700 font-bold border border-slate-300">
@@ -438,6 +467,11 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
                           ? 'OD — Olho Direito'
                           : 'OE — Olho Esquerdo'}
                       </span>
+                      {item.followupDate && (
+                        <span className="px-2 py-0.5 rounded font-mono text-[10px] bg-amber-100 text-amber-800 font-bold border border-amber-300">
+                          Prev. Acomp: {item.followupDate.split('-').reverse().join('/')}
+                        </span>
+                      )}
                     </div>
                     <button
                       type="button"
@@ -587,16 +621,37 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
             </label>
 
             {hasFollowup && (
-              <div className="pt-2">
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                  Data Prevista do Acompanhamento:
-                </label>
-                <input
-                  type="date"
-                  value={followupDate}
-                  onChange={(e) => setFollowupDate(e.target.value)}
-                  className="w-full sm:w-1/2 border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-                />
+              <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    Data Prevista do Acompanhamento:
+                  </label>
+                  <input
+                    type="date"
+                    value={followupDate}
+                    onChange={(e) => setFollowupDate(e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                  />
+                </div>
+                {selectedProcedures.length > 1 && (
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      Vincular a qual procedimento?
+                    </label>
+                    <select
+                      value={selectedFollowupProcId}
+                      onChange={(e) => setSelectedFollowupProcId(e.target.value)}
+                      className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                    >
+                      <option value="ALL">Todos os procedimentos do paciente</option>
+                      {selectedProcedures.map((pr, i) => (
+                        <option key={pr.id} value={pr.id}>
+                          #{i + 1} - {pr.procedureName} ({pr.eyeSide})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             )}
           </div>

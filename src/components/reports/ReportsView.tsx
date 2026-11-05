@@ -18,7 +18,7 @@ import {
   X,
   FileSpreadsheet,
 } from 'lucide-react';
-import { Patient, PatientStatus } from '../../types';
+import { Patient, PatientStatus, PatientProcedureItem } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { getUnitMunicipalities } from '../../services/storage';
@@ -47,6 +47,8 @@ export const ReportsView: React.FC = () => {
 
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
+  const [followupStartDate, setFollowupStartDate] = useState<string>('');
+  const [followupEndDate, setFollowupEndDate] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [selectedProcedure, setSelectedProcedure] = useState<string>('ALL');
   const [selectedDoctor, setSelectedDoctor] = useState<string>('ALL');
@@ -114,7 +116,59 @@ export const ReportsView: React.FC = () => {
     }
   }, [availableCities, selectedCity]);
 
-  // Combined Filter logic (Faixa etária removed)
+  // Helper: Obter procedimentos de exibição respeitando o filtro de data prevista de acompanhamento.
+  // Caso o paciente possua múltiplos procedimentos e apenas um possua data de acompanhamento (ou data dentro do filtro),
+  // exibe somente aquele procedimento.
+  const getPatientDisplayProcedures = (patient: Patient): PatientProcedureItem[] => {
+    const procs: PatientProcedureItem[] =
+      patient.procedures && patient.procedures.length > 0
+        ? patient.procedures
+        : [
+            {
+              id: 'primary',
+              procedureId: patient.requestedProcedureId,
+              procedureName: patient.requestedProcedureName,
+              eyeSide: patient.eyeSide || 'AO',
+              dateRequested: patient.requestedDate,
+              hasFollowup: patient.hasFollowup,
+              followupDate: patient.followupDate,
+            },
+          ];
+
+    const hasFollowupDateFilter = Boolean(followupStartDate || followupEndDate);
+    const isFollowupYesFilter = selectedFollowup === 'yes';
+
+    // Se houver filtro ativo de acompanhamento (por intervalo de data ou "com acompanhamento")
+    if (hasFollowupDateFilter || isFollowupYesFilter) {
+      const matchingProcs = procs.filter((pr) => {
+        const procFollowupDate =
+          pr.followupDate ||
+          (pr.hasFollowup ? patient.followupDate : procs.length === 1 ? patient.followupDate : undefined);
+        const procHasFollowup =
+          pr.hasFollowup ?? (procFollowupDate ? true : procs.length === 1 ? patient.hasFollowup : false);
+
+        if (isFollowupYesFilter && !procHasFollowup && !procFollowupDate) {
+          return false;
+        }
+
+        if (hasFollowupDateFilter) {
+          if (!procFollowupDate) return false;
+          if (followupStartDate && procFollowupDate < followupStartDate) return false;
+          if (followupEndDate && procFollowupDate > followupEndDate) return false;
+        }
+
+        return true;
+      });
+
+      if (matchingProcs.length > 0) {
+        return matchingProcs;
+      }
+    }
+
+    return procs;
+  };
+
+  // Combined Filter logic
   const filteredPatients = useMemo(() => {
     return patients
       .filter((p) => {
@@ -143,11 +197,40 @@ export const ReportsView: React.FC = () => {
           }
         }
 
-        // Procedure (check across multiple procedures)
+        // Data Prevista do Acompanhamento (Filtro por período)
+        const hasFollowupDateFilter = Boolean(followupStartDate || followupEndDate);
+        if (hasFollowupDateFilter) {
+          const displayProcs = getPatientDisplayProcedures(p);
+          const hasMatchingDate = displayProcs.some((pr) => {
+            const fDate =
+              pr.followupDate ||
+              (pr.hasFollowup ? p.followupDate : p.procedures?.length === 1 ? p.followupDate : undefined);
+            if (!fDate) return false;
+            if (followupStartDate && fDate < followupStartDate) return false;
+            if (followupEndDate && fDate > followupEndDate) return false;
+            return true;
+          });
+          if (!hasMatchingDate) return false;
+        }
+
+        // Possui Acompanhamento
+        if (selectedFollowup === 'yes') {
+          const displayProcs = getPatientDisplayProcedures(p);
+          const hasFollowup = displayProcs.some(
+            (pr) => pr.hasFollowup || pr.followupDate || p.hasFollowup
+          );
+          if (!hasFollowup) return false;
+        } else if (selectedFollowup === 'no') {
+          if (p.hasFollowup) return false;
+          if (p.procedures?.some((pr) => pr.hasFollowup || pr.followupDate)) return false;
+        }
+
+        // Procedure (check across multiple procedures / display procedures)
         if (selectedProcedure !== 'ALL') {
+          const displayProcs = getPatientDisplayProcedures(p);
           const matchesPrimary = p.requestedProcedureId === selectedProcedure;
-          const matchesList = p.procedures?.some((pr) => pr.procedureId === selectedProcedure);
-          if (!matchesPrimary && !matchesList) return false;
+          const matchesList = displayProcs.some((pr) => pr.procedureId === selectedProcedure);
+          if (!matchesList && (!matchesPrimary || displayProcs.length !== 1)) return false;
         }
 
         // Doctor
@@ -171,16 +254,15 @@ export const ReportsView: React.FC = () => {
         if (selectedContacts === '2' && p.contactAttempts.length !== 2) return false;
         if (selectedContacts === '3' && p.contactAttempts.length !== 3) return false;
 
-        // Followup
-        if (selectedFollowup === 'yes' && !p.hasFollowup) return false;
-        if (selectedFollowup === 'no' && p.hasFollowup) return false;
-
         return true;
       })
       .sort((a, b) => {
-        // Ordenação independente do filtro por ordem de cadastro: mais antigos primeiro (1º cadastrado primeiro)
-        const timeA = new Date(a.createdAt || a.requestedDate || 0).getTime();
-        const timeB = new Date(b.createdAt || b.requestedDate || 0).getTime();
+        // Ordenação por Data Solicitada: mais antigas primeiro
+        const dateA = a.requestedDate || '';
+        const dateB = b.requestedDate || '';
+        if (dateA !== dateB) return dateA.localeCompare(dateB);
+        const timeA = new Date(a.createdAt || 0).getTime();
+        const timeB = new Date(b.createdAt || 0).getTime();
         if (timeA !== timeB) return timeA - timeB;
         return a.name.localeCompare(b.name, 'pt-BR');
       });
@@ -190,6 +272,8 @@ export const ReportsView: React.FC = () => {
     selectedUnit,
     startDate,
     endDate,
+    followupStartDate,
+    followupEndDate,
     selectedStatus,
     selectedProcedure,
     selectedDoctor,
@@ -200,12 +284,12 @@ export const ReportsView: React.FC = () => {
     selectedFollowup,
   ]);
 
-
-
   const handleResetFilters = () => {
     setSelectedUnit('ALL');
     setStartDate('');
     setEndDate('');
+    setFollowupStartDate('');
+    setFollowupEndDate('');
     setSelectedStatus('ALL');
     setSelectedProcedure('ALL');
     setSelectedDoctor('ALL');
@@ -245,7 +329,12 @@ export const ReportsView: React.FC = () => {
       filtersActive.push(`Médico: ${d ? d.name : selectedDoctor}`);
     }
     if (selectedUrgency !== 'ALL') filtersActive.push(`Urgência: ${selectedUrgency === 'URGENT' ? 'Somente Urgentes' : 'Não Urgentes'}`);
-    if (startDate || endDate) filtersActive.push(`Período: ${startDate || 'início'} até ${endDate || 'atual'}`);
+    if (selectedFollowup === 'yes') filtersActive.push('Acompanhamento: Sim');
+    if (selectedFollowup === 'no') filtersActive.push('Acompanhamento: Não');
+    if (followupStartDate || followupEndDate) {
+      filtersActive.push(`Prev. Acompanhamento: ${followupStartDate || 'início'} até ${followupEndDate || 'atual'}`);
+    }
+    if (startDate || endDate) filtersActive.push(`Período Solicitado: ${startDate || 'início'} até ${endDate || 'atual'}`);
     const filterDescription = filtersActive.length > 0 ? filtersActive.join(' · ') : 'Todos os pacientes (sem restrições)';
 
     const unitObj = selectedUnit === 'ALL' ? null : units.find((u) => u.id === selectedUnit);
@@ -260,10 +349,11 @@ export const ReportsView: React.FC = () => {
       .map((p, idx) => {
         const style = getStatusStyle(p.currentStatus);
         const age = calculateAge(p.birthDate);
-        const procNames =
-          p.procedures && p.procedures.length > 0
-            ? p.procedures.map((pr) => `<span>${pr.procedureName}</span>`).join('; ')
-            : `<span>${p.requestedProcedureName}</span>`;
+        const displayProcs = getPatientDisplayProcedures(p);
+        const procNames = displayProcs.map((pr) => {
+          const badge = pr.followupDate ? ` <span style="color:#b45309; font-weight:700;">(Retorno: ${formatDateBR(pr.followupDate)})</span>` : '';
+          return `<span>${pr.procedureName} (${pr.eyeSide})${badge}</span>`;
+        }).join('; ');
 
         const contactCount = p.contactAttempts?.length || 0;
         const absenceCount = p.totalAbsences || p.absences?.length || 0;
@@ -440,10 +530,10 @@ export const ReportsView: React.FC = () => {
   const handleExportXLSX = () => {
     const data = filteredPatients.map((p, idx) => {
       const age = calculateAge(p.birthDate);
-      const procNames =
-        p.procedures && p.procedures.length > 0
-          ? p.procedures.map((pr) => pr.procedureName).join('; ')
-          : p.requestedProcedureName;
+      const displayProcs = getPatientDisplayProcedures(p);
+      const procNames = displayProcs.map((pr) => `${pr.procedureName} (${pr.eyeSide})`).join('; ');
+      const procFollowupDate = displayProcs.find((pr) => pr.followupDate)?.followupDate || p.followupDate;
+      const procHasFollowup = displayProcs.some((pr) => pr.hasFollowup || pr.followupDate) || p.hasFollowup;
 
       return {
         'Nº': idx + 1,
@@ -460,8 +550,8 @@ export const ReportsView: React.FC = () => {
         'Urgente': p.isUrgent ? 'SIM' : 'NÃO',
         'Faltas': p.totalAbsences,
         'Contatos': `${p.contactAttempts.length}/3`,
-        'Possui Acompanhamento': p.hasFollowup ? 'SIM' : 'NÃO',
-        'Data Acompanhamento': p.followupDate ? formatDateBR(p.followupDate) : '-',
+        'Possui Acompanhamento': procHasFollowup ? 'SIM' : 'NÃO',
+        'Data Acompanhamento': procFollowupDate ? formatDateBR(procFollowupDate) : '-',
         'Observações': p.notes || '',
       };
     });
@@ -782,6 +872,42 @@ export const ReportsView: React.FC = () => {
               ))}
             </select>
           </div>
+
+          {/* Followup Date Range Start */}
+          <div>
+            <label className="block text-slate-700 font-semibold mb-1">Data Prevista Acomp. (De)</label>
+            <input
+              type="date"
+              value={followupStartDate}
+              onChange={(e) => setFollowupStartDate(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+            />
+          </div>
+
+          {/* Followup Date Range End */}
+          <div>
+            <label className="block text-slate-700 font-semibold mb-1">Data Prevista Acomp. (Até)</label>
+            <input
+              type="date"
+              value={followupEndDate}
+              onChange={(e) => setFollowupEndDate(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+            />
+          </div>
+
+          {/* Followup Status Filter */}
+          <div className="sm:col-span-2 lg:col-span-2">
+            <label className="block text-slate-700 font-semibold mb-1">Acompanhamento / Retorno</label>
+            <select
+              value={selectedFollowup}
+              onChange={(e) => setSelectedFollowup(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+            >
+              <option value="ALL">Todos os Casos</option>
+              <option value="yes">Apenas com Acompanhamento Agendado</option>
+              <option value="no">Sem Acompanhamento Agendado</option>
+            </select>
+          </div>
         </div>
 
         {/* Filter Reset Button */}
@@ -807,7 +933,7 @@ export const ReportsView: React.FC = () => {
             Listagem Formatada dos Pacientes ({filteredPatients.length})
           </span>
           <span className="text-[11px] font-semibold text-cyan-800 bg-cyan-50 border border-cyan-200 px-2.5 py-0.5 rounded-full">
-            Ordem de Cadastro (Primeiros Cadastrados)
+            Ordem por Data Solicitada
           </span>
         </div>
 
@@ -839,6 +965,7 @@ export const ReportsView: React.FC = () => {
                   const statusStyle = getStatusStyle(p.currentStatus);
                   const age = calculateAge(p.birthDate);
                   const regDate = p.createdAt ? formatDateBR(p.createdAt.split('T')[0]) : '-';
+                  const displayProcs = getPatientDisplayProcedures(p);
 
                   return (
                     <tr key={p.id} className="hover:bg-slate-50 transition-colors">
@@ -847,7 +974,7 @@ export const ReportsView: React.FC = () => {
                       </td>
                       <td className="py-3 px-4 font-semibold text-slate-900">
                         {p.name}
-                        {p.hasFollowup && (
+                        {(p.hasFollowup || displayProcs.some((pr) => pr.hasFollowup || pr.followupDate)) && (
                           <span className="ml-1.5 px-1.5 py-0.2 bg-cyan-100 text-cyan-800 text-[10px] font-bold rounded">
                             Retorno
                           </span>
@@ -860,19 +987,21 @@ export const ReportsView: React.FC = () => {
                         {formatDateBR(p.birthDate)} {age !== null ? `(${age}a)` : ''}
                       </td>
                       <td className="py-3 px-3">
-                        {p.procedures && p.procedures.length > 0 ? (
-                          <div className="space-y-1">
-                            {p.procedures.map((pr) => (
-                              <div key={pr.id} className="min-h-[20px] flex items-center">
-                                <span className="font-medium text-slate-800 line-clamp-1">{pr.procedureName}</span>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="min-h-[20px] flex items-center">
-                            <span className="font-medium text-slate-800">{p.requestedProcedureName}</span>
-                          </div>
-                        )}
+                        <div className="space-y-1">
+                          {displayProcs.map((pr) => (
+                            <div key={pr.id} className="min-h-[20px] flex items-center gap-1.5 flex-wrap">
+                              <span className="font-medium text-slate-800 line-clamp-1">{pr.procedureName}</span>
+                              <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700 font-mono font-bold border border-slate-200">
+                                {pr.eyeSide}
+                              </span>
+                              {pr.followupDate && (
+                                <span className="px-1.5 py-0.2 rounded text-[10px] bg-amber-100 text-amber-800 font-bold border border-amber-300">
+                                  Acomp: {formatDateBR(pr.followupDate)}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       </td>
                       <td className="py-3 px-3 text-slate-700">{p.city}</td>
                       <td className="py-3 px-3 text-slate-600 truncate max-w-[150px]">
@@ -1028,7 +1157,9 @@ export const ReportsView: React.FC = () => {
                   {selectedProcedure !== 'ALL' && `Procedimento: ${procedures.find((p) => p.id === selectedProcedure)?.name || selectedProcedure} · `}
                   {selectedCity !== 'ALL' && `Município: ${selectedCity} · `}
                   {selectedUrgency !== 'ALL' && `Prioridade: ${selectedUrgency === 'urgent' ? 'Urgentes' : 'Eletivos'} · `}
-                  {startDate || endDate ? `Período: ${startDate || 'início'} até ${endDate || 'atual'}` : 'Geral (sem restrições)'}
+                  {selectedFollowup !== 'ALL' && `Acompanhamento: ${selectedFollowup === 'yes' ? 'Com Retorno' : 'Sem Retorno'} · `}
+                  {(followupStartDate || followupEndDate) && `Prev. Acomp: ${followupStartDate || 'início'} até ${followupEndDate || 'atual'} · `}
+                  {startDate || endDate ? `Período Solicitado: ${startDate || 'início'} até ${endDate || 'atual'}` : 'Geral (sem restrições)'}
                 </div>
 
                 {/* Table */}
@@ -1055,10 +1186,11 @@ export const ReportsView: React.FC = () => {
                       filteredPatients.map((p, idx) => {
                         const style = getStatusStyle(p.currentStatus);
                         const age = calculateAge(p.birthDate);
-                        const procNames =
-                          p.procedures && p.procedures.length > 0
-                            ? p.procedures.map((pr) => pr.procedureName).join('; ')
-                            : p.requestedProcedureName;
+                        const displayProcs = getPatientDisplayProcedures(p);
+                        const procNames = displayProcs.map((pr) => {
+                          const badge = pr.followupDate ? ` [Retorno: ${formatDateBR(pr.followupDate)}]` : '';
+                          return `${pr.procedureName} (${pr.eyeSide})${badge}`;
+                        }).join('; ');
                         const contactCount = p.contactAttempts?.length || 0;
                         const absenceCount = p.totalAbsences || p.absences?.length || 0;
                         const shortUnit = p.unitName ? p.unitName.split('—')[0].trim() : '-';
