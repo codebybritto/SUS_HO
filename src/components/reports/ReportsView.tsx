@@ -989,24 +989,40 @@ export const ReportsView: React.FC = () => {
                         {formatDateBR(p.birthDate)} {age !== null ? `(${age}a)` : ''}
                       </td>
                       <td className="py-2 px-2 min-w-[200px]">
-                        <div className="text-[11px] text-slate-800 leading-snug">
-                          {displayProcs.map((pr, i) => (
-                            <span key={pr.id} className="inline">
-                              <span className="font-medium text-slate-800">{pr.procedureName}</span>{' '}
-                              <span className="text-[9.5px] font-bold text-cyan-800 bg-cyan-50 border border-cyan-200 px-1 py-0.2 rounded whitespace-nowrap">
-                                {pr.eyeSide}
-                              </span>
-                              {pr.followupDate && (
-                                <span className="ml-1 text-[9.5px] font-bold text-amber-800 bg-amber-50 border border-amber-300 px-1.5 py-0.2 rounded whitespace-nowrap">
-                                  Acomp: {formatDateBR(pr.followupDate)}
-                                </span>
-                              )}
-                              {i < displayProcs.length - 1 && (
-                                <span className="text-slate-400 font-bold mx-1.5">;</span>
-                              )}
+                        {displayProcs.length === 1 ? (
+                          <div className="flex items-center gap-1.5 text-[11px] leading-tight">
+                            <span className="font-medium text-slate-800 truncate" title={displayProcs[0].procedureName}>
+                              {displayProcs[0].procedureName}
                             </span>
-                          ))}
-                        </div>
+                            <span className="text-[9.5px] font-bold text-cyan-800 bg-cyan-50 border border-cyan-200 px-1 py-0.2 rounded shrink-0 whitespace-nowrap">
+                              {displayProcs[0].eyeSide}
+                            </span>
+                            {displayProcs[0].followupDate && (
+                              <span className="text-[9.5px] font-bold text-amber-800 bg-amber-50 border border-amber-300 px-1.5 py-0.2 rounded shrink-0 whitespace-nowrap">
+                                Acomp: {formatDateBR(displayProcs[0].followupDate)}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="space-y-1 py-0.5">
+                            {displayProcs.map((pr) => (
+                              <div key={pr.id} className="flex items-center gap-1.5 text-[11px] leading-tight">
+                                <span className="w-1.5 h-1.5 rounded-full bg-cyan-600 shrink-0" />
+                                <span className="font-medium text-slate-800 truncate" title={pr.procedureName}>
+                                  {pr.procedureName}
+                                </span>
+                                <span className="text-[9.5px] font-bold text-cyan-800 bg-cyan-50 border border-cyan-200 px-1 py-0.2 rounded shrink-0 whitespace-nowrap">
+                                  {pr.eyeSide}
+                                </span>
+                                {pr.followupDate && (
+                                  <span className="text-[9.5px] font-bold text-amber-800 bg-amber-50 border border-amber-300 px-1.5 py-0.2 rounded shrink-0 whitespace-nowrap">
+                                    Acomp: {formatDateBR(pr.followupDate)}
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </td>
                       <td className="py-2 px-2 text-slate-700 min-w-[95px] max-w-[125px] truncate" title={p.city}>
                         {p.city}
