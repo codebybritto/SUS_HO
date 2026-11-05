@@ -941,16 +941,16 @@ export const ReportsView: React.FC = () => {
           <table className="w-full text-xs text-left">
             <thead className="bg-slate-900 text-white font-semibold uppercase tracking-wider text-[11px]">
               <tr>
-                <th className="py-3 px-3 text-center w-10">#</th>
-                <th className="py-3 px-4">Nome do Paciente</th>
-                <th className="py-3 px-3">Data Cadastro</th>
-                <th className="py-3 px-3">Nascimento (Idade)</th>
-                <th className="py-3 px-3">Procedimento(s) Solicitado(s)</th>
-                <th className="py-3 px-3">Município</th>
-                <th className="py-3 px-3">Médico</th>
-                <th className="py-3 px-3">Data Solicitada</th>
-                <th className="py-3 px-3 text-center">Status</th>
-                <th className="py-3 px-3 text-center">Urgente</th>
+                <th className="py-3 px-3 text-center w-10 whitespace-nowrap">#</th>
+                <th className="py-3 px-4 whitespace-nowrap">Nome do Paciente</th>
+                <th className="py-3 px-3 whitespace-nowrap">Data Cadastro</th>
+                <th className="py-3 px-3 whitespace-nowrap">Nascimento (Idade)</th>
+                <th className="py-3 px-3 min-w-[240px]">Procedimento(s) Solicitado(s)</th>
+                <th className="py-3 px-3 whitespace-nowrap">Município</th>
+                <th className="py-3 px-3 whitespace-nowrap">Médico</th>
+                <th className="py-3 px-3 whitespace-nowrap">Data Solicitada</th>
+                <th className="py-3 px-3 text-center whitespace-nowrap">Status</th>
+                <th className="py-3 px-3 text-center whitespace-nowrap">Urgente</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
@@ -968,14 +968,14 @@ export const ReportsView: React.FC = () => {
                   const displayProcs = getPatientDisplayProcedures(p);
 
                   return (
-                    <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="py-3 px-3 text-center text-slate-500 font-bold font-mono">
+                    <tr key={p.id} className="hover:bg-slate-50 transition-colors align-middle">
+                      <td className="py-3 px-3 text-center text-slate-500 font-bold font-mono whitespace-nowrap">
                         {idx + 1}
                       </td>
-                      <td className="py-3 px-4 font-semibold text-slate-900">
+                      <td className="py-3 px-4 font-semibold text-slate-900 whitespace-nowrap">
                         {p.name}
                         {(p.hasFollowup || displayProcs.some((pr) => pr.hasFollowup || pr.followupDate)) && (
-                          <span className="ml-1.5 px-1.5 py-0.2 bg-cyan-100 text-cyan-800 text-[10px] font-bold rounded">
+                          <span className="ml-1.5 px-1.5 py-0.2 bg-cyan-100 text-cyan-800 text-[10px] font-bold rounded whitespace-nowrap">
                             Retorno
                           </span>
                         )}
@@ -986,25 +986,28 @@ export const ReportsView: React.FC = () => {
                       <td className="py-3 px-3 text-slate-600 whitespace-nowrap">
                         {formatDateBR(p.birthDate)} {age !== null ? `(${age}a)` : ''}
                       </td>
-                      <td className="py-3 px-3">
-                        <div className="space-y-1">
-                          {displayProcs.map((pr) => (
-                            <div key={pr.id} className="min-h-[20px] flex items-center gap-1.5 flex-wrap">
-                              <span className="font-medium text-slate-800 line-clamp-1">{pr.procedureName}</span>
-                              <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700 font-mono font-bold border border-slate-200">
+                      <td className="py-3 px-3 min-w-[240px] max-w-md">
+                        <div className="leading-relaxed">
+                          {displayProcs.map((pr, i) => (
+                            <span key={pr.id} className="inline-block mr-2 my-0.5">
+                              <span className="font-medium text-slate-800">{pr.procedureName}</span>
+                              <span className="ml-1 px-1.5 py-0.2 rounded font-mono text-[10px] bg-slate-100 text-slate-700 font-bold border border-slate-300 whitespace-nowrap">
                                 {pr.eyeSide}
                               </span>
                               {pr.followupDate && (
-                                <span className="px-1.5 py-0.2 rounded text-[10px] bg-amber-100 text-amber-800 font-bold border border-amber-300">
+                                <span className="ml-1 px-1.5 py-0.2 rounded font-mono text-[10px] bg-amber-100 text-amber-800 font-bold border border-amber-300 whitespace-nowrap">
                                   Acomp: {formatDateBR(pr.followupDate)}
                                 </span>
                               )}
-                            </div>
+                              {i < displayProcs.length - 1 && (
+                                <span className="text-slate-400 ml-1.5 font-bold">;</span>
+                              )}
+                            </span>
                           ))}
                         </div>
                       </td>
-                      <td className="py-3 px-3 text-slate-700">{p.city}</td>
-                      <td className="py-3 px-3 text-slate-600 truncate max-w-[150px]">
+                      <td className="py-3 px-3 text-slate-700 whitespace-nowrap">{p.city}</td>
+                      <td className="py-3 px-3 text-slate-600 whitespace-nowrap truncate max-w-[180px]" title={p.requestingDoctorName || 'Não informado'}>
                         {p.requestingDoctorName || 'Não informado'}
                       </td>
                       <td className="py-3 px-3 text-slate-600 whitespace-nowrap">
